@@ -1,0 +1,11 @@
+#vs code directory
+.vscode/
+
+#log folder
+log/
+
+#config files folder
+config/
+
+#csv files for timetable
+csv/
