@@ -64,7 +64,6 @@ export default function getDataSet(): DataSet {
 
   dataset.subjects = getSubjects(compositeClassCodes, subjectExceptions)
   dataset.compositeClasses = getCompositeClasses(classExceptions)
-  // console.log(dataset.compositeClasses)
 
   return dataset
 }
@@ -249,8 +248,8 @@ function getStudents(classCode: string): Set<string> {
   return students
 }
 
-function getTeacher(classCode: string): string | undefined {
-  let username = undefined
+function getTeacher(classCode: string): string {
+  let username = ''
 
   for (const row of timetable) {
     if (classCode === row['Class Code']) {
