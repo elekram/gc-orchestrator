@@ -1,5 +1,5 @@
 import { tinyLogger } from './deps.ts'
-import { Subject } from './get-dataset.ts'
+import { Subject } from './get-subjects-and-classes.ts'
 import appSettings from '../config/config.ts'
 
 export default function testSubjects(subjects: Map<string, Subject>) {
@@ -71,7 +71,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
     }
 
     if (verboseWarnings && isWarning) {
-      console.log(s)
+      console.dir(s, { maxArrayLength: null })
     }
   }
 }

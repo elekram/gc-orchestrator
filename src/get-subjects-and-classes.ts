@@ -1,11 +1,6 @@
 import { csv } from './deps.ts'
 import appSettings from '../config/config.ts'
 
-interface DataSet {
-  subjects: Map<string, Subject>
-  compositeClasses: Map<string, CompositeClass>
-}
-
 export interface Subject {
   name: string
   domain: string
@@ -20,7 +15,7 @@ interface Lesson {
   day: string
 }
 
-interface CompositeClass {
+export interface CompositeClass {
   teachers: Set<string>
   students: Set<string>
 }
@@ -54,18 +49,12 @@ const unscheduledDuties = csv.parse(
   { skipFirstRow: true }
 )
 
-export default function getDataSet(): DataSet {
-  const dataset: DataSet = {
-    subjects: new Map(),
-    compositeClasses: new Map()
-  }
-
+export default function getSubjectsAndClasses() {
   const compositeClassCodes = getCompositeClassCodes(classExceptions)
+  const subjects = getSubjects(compositeClassCodes, subjectExceptions)
+  const compositeClasses = getCompositeClasses(classExceptions)
 
-  dataset.subjects = getSubjects(compositeClassCodes, subjectExceptions)
-  dataset.compositeClasses = getCompositeClasses(classExceptions)
-
-  return dataset
+  return { subjects, compositeClasses }
 }
 
 function getCompositeClasses(classExceptions: string[]) {
