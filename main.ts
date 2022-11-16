@@ -1,8 +1,10 @@
 import GoogleAuth from './src/google-auth.ts';
-import getDataSet from './src/get-data-set.ts';
-import testSubjects from './src/test-subjects.ts'
+import getDataSet from './src/get-dataset.ts';
+import testSubjects from './src/test-dataset.ts'
 
-const dataSet = getDataSet();
-testSubjects(dataSet.subjects)
+const dataset = getDataSet();
+console.log(dataset.subjects)
+// testSubjects(dataset.subjects)
+
 
 

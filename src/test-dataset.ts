@@ -1,5 +1,5 @@
 import { tinyLogger } from './deps.ts'
-import { Subject } from './get-data-set.ts'
+import { Subject } from './get-dataset.ts'
 import appSettings from '../config/config.ts'
 
 export default function testSubjects(subjects: Map<string, Subject>) {
