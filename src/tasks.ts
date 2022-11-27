@@ -1,5 +1,7 @@
 import { Store } from './store.ts'
+import * as googleClassroom from './google-actions.ts'
 import appSettings from '../config/config.ts'
+import { strikethrough } from 'https://deno.land/std@0.165.0/fmt/colors.ts'
 
 export interface Task {
   type: 'create' |
@@ -16,82 +18,113 @@ export interface Task {
     section: string
     description: string
     descriptionHeading: string,
-    courseState: 'ACTIVE' | 'ARCHIVED'
+    courseState: string
   }
 }
 
-export default {
-  getSubjectCreationTasks(store: Store): void {
-    const subjects = store.subjects
+export function addSubjectTasksToStore(store: Store): void {
+  const subjects = store.subjects
 
-    for (const [subjectKey, subject] of subjects) {
-      const alias = `d:SUBJ-${subjectKey}`
+  for (const [subjectKey, subject] of subjects) {
+    const alias = `d:SUBJ-${subjectKey}`
+    const attributes = {
+      id: alias,
+      ownerId: appSettings.classadmin,
+      name: `${subjectKey} (Teachers)`,
+      section: subject.name,
+      description: `Domain: ${subject.domain} - ${subject.name} (Teachers)`,
+      descriptionHeading: `Subject Domain: ${subject.domain}`,
+      courseState: 'ACTIVE'
+    }
 
-      store.courseTasks.push({
+    if (!store.courseAliases.has(alias)) {
+      store.courseCreationTasks.push({
         type: 'create',
-        attributes: {
-          id: alias,
-          ownerId: appSettings.classadmin,
-          name: `${subjectKey} (Teachers)`,
-          section: subject.name,
-          description: `Domain: ${subject.domain} - ${subject.name} (Teachers)`,
-          descriptionHeading: `Subject Domain: ${subject.domain}`,
-          courseState: 'ACTIVE'
-        }
+        attributes
       })
     }
-  },
 
-  getClassCreationTasks(store: Store): void {
-    const subjects = store.subjects
+    store.courseUpdateTasks.push({
+      type: 'update',
+      attributes
+    })
+  }
+}
 
-    for (const [_subjectkey, subject] of subjects) {
-      const classes = subject.classes
-      const name = subject.name
+export function addClassTasksToStore(store: Store): void {
+  const subjects = store.subjects
 
-      for (const [classKey, _c] of classes) {
-        const alias = `d:${appSettings.academicYear}-${classKey}`
+  for (const [_subjectkey, subject] of subjects) {
+    const classes = subject.classes
+    const name = subject.name
 
-        store.courseTasks.push({
+    for (const [classKey, _c] of classes) {
+      const alias = `d:${appSettings.academicYear}-${classKey}`
+      const attributes = {
+        id: alias,
+        ownerId: appSettings.classadmin,
+        name,
+        section: name,
+        description: `Domain: ${subject.domain} - ${subject.name}`,
+        descriptionHeading: `Subject Domain: ${subject.domain}`,
+        courseState: 'ACTIVE'
+      }
+
+      if (!store.courseAliases.has(alias)) {
+        store.courseCreationTasks.push({
           type: 'create',
-          attributes: {
-            id: alias,
-            ownerId: appSettings.classadmin,
-            name,
-            section: name,
-            description: `Domain: ${subject.domain} - ${subject.name}`,
-            descriptionHeading: `Subject Domain: ${subject.domain}`,
-            courseState: 'ACTIVE'
-          }
+          attributes
         })
       }
-    }
-  },
 
-  getCompositeClassCreationTasks(store: Store): void {
-    const classes = store.compositeClasses
-
-    for (const [classKey, c] of classes) {
-      const alias = `d:${appSettings.academicYear}-${classKey}`
-      const name = `${classKey} (Composite)`
-      const description = `Composite Class (${classKey})`
-
-      store.courseTasks.push({
-        type: 'create',
-        attributes: {
-          id: alias,
-          ownerId: appSettings.classadmin,
-          name,
-          section: name,
-          description,
-          descriptionHeading: description,
-          courseState: 'ACTIVE'
-        }
+      store.courseUpdateTasks.push({
+        type: 'update',
+        attributes
       })
     }
-  },
+  }
+}
 
-  getAttributeUpdateTasks(store: Store) {
+export function addCompositeClassTasksToStore(store: Store): void {
+  const classes = store.compositeClasses
 
+  for (const [classKey, _c] of classes) {
+    const alias = `d:${appSettings.academicYear}-${classKey}`
+    const name = `${classKey} (Composite)`
+    const description = `Composite Class (${classKey})`
+    const attributes = {
+      id: alias,
+      ownerId: appSettings.classadmin,
+      name,
+      section: name,
+      description,
+      descriptionHeading: description,
+      courseState: 'ACTIVE'
+    }
+
+    if (!store.courseAliases.has(alias)) {
+      store.courseCreationTasks.push({
+        type: 'create',
+        attributes
+      })
+    }
+
+    store.courseUpdateTasks.push({
+      type: 'update',
+      attributes
+    })
+  }
+}
+
+export async function addStudentEnrolmentTasks(store: Store) {
+  for (const [subjectKey, subject] of store.subjects) {
+    for (const [classcode, students] of subject.classes) {
+      console.log(classcode, students)
+      const res = await googleClassroom.listCourseMembers(
+        store.auth,
+        'students',
+        `${appSettings.academicYear}-${classcode}`)
+      console.log(res)
+    }
   }
 }

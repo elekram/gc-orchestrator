@@ -1,11 +1,14 @@
 //import google from 'npm:googleapis@109.0.1'
 import { Store } from './store.ts'
-import { googleClassroom } from './google-actions.ts'
+import * as googleClassroom from './google-actions.ts'
 import appSettings from '../config/config.ts'
 
 export async function addCoursesToStore(store: Store) {
   const auth = store.auth
-  const courses = await googleClassroom.listCourses(auth, 'teacherId', appSettings.classadmin)
+  const courses = await googleClassroom.listCourses(
+    auth, 'teacherId',
+    appSettings.classadmin
+  )
 
   for (const course of courses) {
     const googleCourseId = course.id as string
@@ -18,8 +21,8 @@ export async function addCourseAliasMapToStore(store: Store) {
   const courses = store.courses
 
   const googleCoursesIds: string[] = []
-  for (const [courseId, _course] of courses) {
-    googleCoursesIds.push(courseId)
+  for (const [id, _course] of courses) {
+    googleCoursesIds.push(id)
   }
 
   const courseAliases = await Promise.all(
@@ -34,12 +37,12 @@ export async function addCourseAliasMapToStore(store: Store) {
   )
 
   courseAliases.forEach((alias) => {
-    const courseId = alias.id
+    const googleCourseId = alias.id
     alias.aliases.forEach(e => {
-      store.courseAliases.set(e.substring(2), courseId)
+      const courseAlias = e
+      store.courseAliases.set(courseAlias, googleCourseId)
     })
   })
-  console.log(store.courseAliases)
 }
 
 

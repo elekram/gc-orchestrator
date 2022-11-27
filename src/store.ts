@@ -2,7 +2,6 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
 import { Subject, CompositeClass } from './subjects-and-classes.ts'
 import { Task } from './tasks.ts'
-import { Course } from './courses.ts'
 
 export interface Store {
   auth: GoogleAuth
@@ -10,7 +9,8 @@ export interface Store {
   courseAliases: Map<string, string>
   subjects: Map<string, Subject>
   compositeClasses: Map<string, CompositeClass>
-  courseTasks: Task[]
+  courseCreationTasks: Task[]
+  courseUpdateTasks: Task[]
 }
 
 export const store: Store = {
@@ -23,6 +23,7 @@ export const store: Store = {
   courseAliases: new Map(),
   subjects: new Map(),
   compositeClasses: new Map(),
-  courseTasks: []
+  courseCreationTasks: [],
+  courseUpdateTasks: []
 }
 

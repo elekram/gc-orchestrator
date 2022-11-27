@@ -12,7 +12,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
-      const message = `Domain/Faculty not found in ${key} ${s.name}`
+      const message = `Domain/Faculty not found in ${key}`
 
       tinyLogger.log(type, message, {
         logLevel,
@@ -24,7 +24,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
-      const message = `No domain leaders found in ${key} ${s.name}`
+      const message = `No domain leaders found in ${key}`
 
       tinyLogger.log(type, message, {
         logLevel,
@@ -36,7 +36,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
-      const message = `No teachers found in ${key} ${s.name}`
+      const message = `No teachers found in ${key}`
 
       tinyLogger.log(type, message, {
         logLevel,
@@ -48,7 +48,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
-      const message = `No classes found in ${key} ${s.name}`
+      const message = `No classes found in ${key}`
 
       tinyLogger.log(type, message, {
         logLevel,
@@ -61,7 +61,7 @@ export default function testSubjects(subjects: Map<string, Subject>) {
         isWarning = true
         const logLevel = 'warn'
         const type = 'ƒ-testSubject'
-        const message = `No students found in class ${key} ${s.name}`
+        const message = `No students found in class ${key}`
 
         tinyLogger.log(type, message, {
           logLevel,

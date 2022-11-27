@@ -49,7 +49,7 @@ const unscheduledDuties = csv.parse(
   { skipFirstRow: true }
 )
 
-export default function getSubjectsAndClasses() {
+export function getSubjectsAndClasses() {
   const compositeClassCodes = getCompositeClassCodes(classExceptions)
   const subjects = getSubjects(compositeClassCodes, subjectExceptions)
   const compositeClasses = getCompositeClasses(classExceptions)
