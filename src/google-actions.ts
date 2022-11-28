@@ -11,6 +11,16 @@ export async function listCourseMembers(
   const path = 'https://classroom.googleapis.com/v1/courses/'
   const id = `d:${encodeURIComponent(courseId)}`
 
+  index = index || 0
+  total = total || 0
+
+  index = index + 1
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(`Fetching ${type} for course: ${courseId} ${index} of ${total} tasks`)
+
   const response = await fetch(
     `${path}${id}/${type}`,
     {
@@ -20,7 +30,7 @@ export async function listCourseMembers(
   )
 
   const data = await processResponse(response)
-  console.log(data)
+
   const members = new Set()
   if (data[type]) {
     data[type].forEach((member: Record<string, unknown>) => {
@@ -108,7 +118,8 @@ export async function getCourseAliases(auth: GoogleAuth, courseId: string, index
 async function processResponse(r: Response) {
   if (!r.ok) {
     const jsonData = await r.json()
-    throw jsonData
+    // throw jsonData
+    console.log(jsonData)
   }
   const jsonData = await r.json()
   return jsonData

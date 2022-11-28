@@ -4,12 +4,7 @@ import { getLogger } from './src/log.ts';
 import appSettings from './config/config.ts'
 import { getSubjectsAndClasses } from './src/subjects-and-classes.ts';
 import testSubjects from './src/test-subjects.ts'
-import {
-  addSubjectTasksToStore,
-  addClassTasksToStore,
-  addCompositeClassTasksToStore,
-  addStudentEnrolmentTasks
-} from './src/tasks.ts'
+import { addTasksToStore } from './src/tasks.ts'
 import { addCourseAliasMapToStore, addCoursesToStore } from './src/courses.ts'
 import { getToken } from './src/google-jwt-sa.ts'
 import * as googleClassroom from './src/google-actions.ts';
@@ -42,8 +37,9 @@ if (input === null || input.toLowerCase() !== 'y') {
 // addSubjectTasksToStore(store)
 // addClassTasksToStore(store)
 // addCompositeClassTasksToStore(store)
-addStudentEnrolmentTasks(store)
-//const res = await googleClassroom.listCourseMembers(store.auth, 'students', '2022-ENG08A')
+addTasksToStore(store)
+// console.log(store.courseCreationTasks)
+
 // console.log(res)
 
 
