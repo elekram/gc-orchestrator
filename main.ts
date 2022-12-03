@@ -4,7 +4,7 @@ import { getLogger } from './src/log.ts';
 import appSettings from './config/config.ts'
 import { getSubjectsAndClasses } from './src/subjects-and-classes.ts';
 import testSubjects from './src/test-subjects.ts'
-import { addTasksToStore } from './src/tasks.ts'
+import * as tasks from './src/tasks.ts'
 import { addCourseAliasMapToStore, addCoursesToStore } from './src/courses.ts'
 import { getToken } from './src/google-jwt-sa.ts'
 import * as googleClassroom from './src/google-actions.ts';
@@ -20,10 +20,10 @@ store.auth = await getToken(googleServiceAccountJson, {
   delegationSubject: appSettings.jwtSubject
 })
 
-store.subjects = getSubjectsAndClasses().subjects
-store.compositeClasses = getSubjectsAndClasses().compositeClasses
+store.timetable.subjects = getSubjectsAndClasses().subjects
+store.timetable.compositeClasses = getSubjectsAndClasses().compositeClasses
 
-testSubjects(store.subjects)
+testSubjects(store.timetable.subjects)
 const input = prompt('\nWould you like to continue? (y/n)')
 
 if (input === null || input.toLowerCase() !== 'y') {
@@ -31,14 +31,18 @@ if (input === null || input.toLowerCase() !== 'y') {
   Deno.exit()
 }
 
-//await addCoursesToStore(store)
-// await addCourseAliasMapToStore(store)
+await addCoursesToStore(store)
+await addCourseAliasMapToStore(store)
+
 
 // addSubjectTasksToStore(store)
 // addClassTasksToStore(store)
 // addCompositeClassTasksToStore(store)
-addTasksToStore(store)
-// console.log(store.courseCreationTasks)
+await tasks.addSubjectAndClassTasksToStore(store)
+await tasks.addCompositeClassTasksToStore(store)
+await tasks.addStudentEnrolmentTasksToStore(store)
+console.log(store.tasks.courseCreationTasks)
+console.log(store.tasks.enrolmentTasks)
 
 // console.log(res)
 

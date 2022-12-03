@@ -1,16 +1,23 @@
 // import { readRecord } from 'https://deno.land/std@0.162.0/encoding/csv/_io.ts'
 import { GoogleAuth } from './google-jwt-sa.ts'
-import { Subject, CompositeClass } from './subjects-and-classes.ts'
-import { Task } from './tasks.ts'
+import { Subject, Enrolments } from './subjects-and-classes.ts'
+import { CourseTask, EnrolmentTask } from './tasks.ts'
 
 export interface Store {
   auth: GoogleAuth
-  courses: Map<string, unknown>
-  courseAliases: Map<string, string>
-  subjects: Map<string, Subject>
-  compositeClasses: Map<string, CompositeClass>
-  courseCreationTasks: Task[]
-  courseUpdateTasks: Task[]
+  timetable: {
+    subjects: Map<string, Subject>
+    compositeClasses: Map<string, Enrolments>
+  }
+  remote: {
+    courses: Map<string, unknown>
+    courseAliases: Map<string, string>
+  }
+  tasks: {
+    courseCreationTasks: CourseTask[]
+    courseUpdateTasks: CourseTask[]
+    enrolmentTasks: EnrolmentTask[]
+  }
 }
 
 export const store: Store = {
@@ -19,11 +26,18 @@ export const store: Store = {
     expires_in: 0,
     token_type: ''
   },
-  courses: new Map(),
-  courseAliases: new Map(),
-  subjects: new Map(),
-  compositeClasses: new Map(),
-  courseCreationTasks: [],
-  courseUpdateTasks: []
+  timetable: {
+    subjects: new Map(),
+    compositeClasses: new Map(),
+  },
+  remote: {
+    courses: new Map(),
+    courseAliases: new Map()
+  },
+  tasks: {
+    courseCreationTasks: [],
+    courseUpdateTasks: [],
+    enrolmentTasks: []
+  }
 }
 

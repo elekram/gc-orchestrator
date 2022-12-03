@@ -6,7 +6,7 @@ export interface Subject {
   domain: string
   leaders: Set<string>
   teachers: Set<string>
-  classes: Map<string, Set<string>>
+  classes: Map<string, Enrolments>
 }
 
 interface Lesson {
@@ -15,7 +15,7 @@ interface Lesson {
   day: string
 }
 
-export interface CompositeClass {
+export interface Enrolments {
   teachers: Set<string>
   students: Set<string>
 }
@@ -61,7 +61,7 @@ function getCompositeClasses(classExceptions: string[]) {
   const uniqueLessons = getUniqueLessons(classExceptions)
   const compositeClasses = filterCompositeClasses(uniqueLessons, classExceptions)
 
-  const assesmbledCompositeClasses: Map<string, CompositeClass> = new Map()
+  const assesmbledCompositeClasses: Map<string, Enrolments> = new Map()
 
   for (const [_key, c] of compositeClasses) {
     let compositeClassName = ''
@@ -175,25 +175,30 @@ function getSubjects(compositeClassCodes: Set<string>, subjectExceptions: string
         domain,
         leaders: new Set<string>(leaders),
         teachers: new Set<string>(leaders),
-        classes: new Map<string, Set<string>>()
+        classes: new Map<string, Enrolments>()
       }
 
       if (!compositeClassCodes.has(classCode)) {
-        subject.classes.set(classCode, new Set<string>(students))
-      }
-
-      if (teacher) {
-        subject.teachers.add(teacher)
+        subject.classes.set(classCode, {
+          students: new Set<string>(students),
+          teachers: new Set<string>()
+        })
+        if (teacher) {
+          subject.classes.get(classCode)?.teachers.add(teacher)
+        }
       }
 
       subjects.set(subjectCode, subject)
-    } else {
-      if (!compositeClassCodes.has(classCodeWithSemeterPrefix)) {
-        subjects.get(subjectCode)?.classes.set(classCode, new Set<string>(students))
-      }
 
-      if (teacher) {
-        subjects.get(subjectCode)?.teachers.add(teacher)
+    } else {
+      if (!compositeClassCodes.has(classCode)) {
+        subjects.get(subjectCode)?.classes.set(classCode, {
+          students: new Set<string>(students),
+          teachers: new Set<string>(teacher)
+        })
+        if (teacher) {
+          subjects.get(subjectCode)?.teachers.add(teacher)
+        }
       }
     }
   }
@@ -230,7 +235,7 @@ function getStudents(classCode: string): Set<string> {
 
       if (student) {
         const username = student + gooogleDomain
-        students.add(username)
+        students.add(username.toLowerCase())
       }
     }
   }

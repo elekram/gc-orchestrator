@@ -12,13 +12,13 @@ export async function addCoursesToStore(store: Store) {
 
   for (const course of courses) {
     const googleCourseId = course.id as string
-    store.courses.set(googleCourseId, course)
+    store.remote.courses.set(googleCourseId, course)
   }
 }
 
 export async function addCourseAliasMapToStore(store: Store) {
   const auth = store.auth
-  const courses = store.courses
+  const courses = store.remote.courses
 
   const googleCoursesIds: string[] = []
   for (const [id, _course] of courses) {
@@ -40,7 +40,7 @@ export async function addCourseAliasMapToStore(store: Store) {
     const googleCourseId = alias.id
     alias.aliases.forEach(e => {
       const courseAlias = e
-      store.courseAliases.set(courseAlias, googleCourseId)
+      store.remote.courseAliases.set(courseAlias, googleCourseId)
     })
   })
 }

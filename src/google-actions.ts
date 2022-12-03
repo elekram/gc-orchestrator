@@ -4,12 +4,12 @@ import appSettings from '../config/config.ts'
 export async function listCourseMembers(
   auth: GoogleAuth,
   type: 'students' | 'teachers',
-  courseId: string,
+  courseAlias: string,
   index: number,
   total: number
 ) {
   const path = 'https://classroom.googleapis.com/v1/courses/'
-  const id = `d:${encodeURIComponent(courseId)}`
+  const id = encodeURIComponent(`d:${courseAlias}`)
 
   index = index || 0
   total = total || 0
@@ -19,7 +19,7 @@ export async function listCourseMembers(
   const delay = index * appSettings.taskDelay
   await sleep(delay)
 
-  console.log(`Fetching ${type} for course: ${courseId} ${index} of ${total} tasks`)
+  console.log(`Fetching ${type} for course: ${courseAlias} ${index} of ${total} tasks`)
 
   const response = await fetch(
     `${path}${id}/${type}`,
@@ -28,17 +28,20 @@ export async function listCourseMembers(
       headers: getHeaders(auth)
     }
   )
-
   const data = await processResponse(response)
 
-  const members = new Set()
+  const members: string[] = []
   if (data[type]) {
     data[type].forEach((member: Record<string, unknown>) => {
       const memberProfile = member.profile as Record<string, string>
-      members.add(memberProfile.emailAddress)
+      members.push(memberProfile.emailAddress)
     })
   }
-  return members
+
+  return {
+    courseAlias,
+    [type]: members
+  }
 }
 
 export async function listCourses(
@@ -82,7 +85,12 @@ export async function listCourses(
   return courses
 }
 
-export async function getCourseAliases(auth: GoogleAuth, courseId: string, index: number, total: number) {
+export async function getCourseAliases(
+  auth: GoogleAuth,
+  courseId: string,
+  index: number,
+  total: number
+) {
   const id = `${encodeURIComponent(courseId)}`
   index = index || 0
   total = total || 0
@@ -91,6 +99,8 @@ export async function getCourseAliases(auth: GoogleAuth, courseId: string, index
 
   const delay = index * appSettings.taskDelay
   await sleep(delay)
+
+  console.log(`Fetching alias for course: ${courseId} ${index} of ${total} tasks`)
 
   const response = await fetch(
     `https://classroom.googleapis.com/v1/courses/${id}/aliases`,
@@ -103,12 +113,11 @@ export async function getCourseAliases(auth: GoogleAuth, courseId: string, index
 
   const aliases: string[] = []
   if (data.aliases && data.aliases.length) {
-    data.aliases.forEach((e) => {
-      aliases.push(e.alias)
+    data.aliases.forEach((e: { alias: string }) => {
+      aliases.push(e.alias.substring(2).trim())
     })
   }
 
-  console.log(`Fetching aliase for course: ${courseId} ${index} of ${total} tasks`)
   return {
     id: courseId,
     aliases
@@ -118,8 +127,7 @@ export async function getCourseAliases(auth: GoogleAuth, courseId: string, index
 async function processResponse(r: Response) {
   if (!r.ok) {
     const jsonData = await r.json()
-    // throw jsonData
-    console.log(jsonData)
+    throw jsonData
   }
   const jsonData = await r.json()
   return jsonData
