@@ -1,12 +1,21 @@
 import { csv } from './deps.ts'
 import appSettings from '../config/config.ts'
+import { Store } from './store.ts'
 
 export interface Subject {
   name: string
   domain: string
   leaders: Set<string>
   teachers: Set<string>
-  classes: Map<string, Enrolments>
+}
+
+export interface Class {
+  subjectCode: string
+  name: string
+  domain: string
+  leaders: Set<string>
+  teachers: Set<string>
+  students: Set<string>
 }
 
 interface Lesson {
@@ -49,15 +58,15 @@ const unscheduledDuties = csv.parse(
   { skipFirstRow: true }
 )
 
-export function getSubjectsAndClasses() {
+export function addTimetableToStore(store: Store) {
   const compositeClassCodes = getCompositeClassCodes(classExceptions)
-  const subjects = getSubjects(compositeClassCodes, subjectExceptions)
-  const compositeClasses = getCompositeClasses(classExceptions)
+  const subjects = addSubjectsAndClassesToStore(store, compositeClassCodes, subjectExceptions)
+  const compositeClasses = addCompositeClassesToStore(store, classExceptions)
 
   return { subjects, compositeClasses }
 }
 
-function getCompositeClasses(classExceptions: string[]) {
+function addCompositeClassesToStore(store: Store, classExceptions: string[]) {
   const uniqueLessons = getUniqueLessons(classExceptions)
   const compositeClasses = filterCompositeClasses(uniqueLessons, classExceptions)
 
@@ -66,11 +75,11 @@ function getCompositeClasses(classExceptions: string[]) {
   for (const [_key, c] of compositeClasses) {
     let compositeClassName = ''
     const sortedClasses: string[] = Array.from(c).sort()
-    const teachers = new Set<string>()
+    let teachers = new Set<string>()
     let students = new Set<string>()
 
     sortedClasses.forEach(c => {
-      teachers.add(getTeacher(c))
+      teachers = getTeachers(c)
       students = getStudents(c)
 
       compositeClassName += `${c.substring(1)}-`
@@ -85,7 +94,7 @@ function getCompositeClasses(classExceptions: string[]) {
     assesmbledCompositeClasses.set(compositeClassName, classMembers)
   }
 
-  return assesmbledCompositeClasses
+  store.timetable.compositeClasses = assesmbledCompositeClasses
 }
 
 function getCompositeClassCodes(classExceptions: string[]): Set<string> {
@@ -152,17 +161,23 @@ function filterCompositeClasses(uniqueLessons: Map<string, Lesson>,
   return compositeClasses
 }
 
-function getSubjects(compositeClassCodes: Set<string>, subjectExceptions: string[]): Map<string, Subject> {
+export function addSubjectsAndClassesToStore(
+  store: Store,
+  compositeClassCodes: Set<string>,
+  subjectExceptions: string[]
+): void {
   const subjects: Map<string, Subject> = new Map()
+  const classes: Map<string, Class> = new Map()
 
   for (const row of classNames) {
     const name = (row['Subject Name'] as string).replace(/['"]+/g, '')
     const subjectCode = (row['Subject Code'] as string).substring(1)
+    const subjectCodeWithSemeterPrefix = row['Subject Code'] as string
     const classCode = (row['Class Code'] as string).substring(1)
     const classCodeWithSemeterPrefix = row['Class Code'] as string
     const domain = (row['Faculty Name'] as string).split('_')[0].toUpperCase()
     const leaders = getLeaders(domain)
-    const teacher = getTeacher(classCodeWithSemeterPrefix)
+    const teachers = getTeachers(subjectCodeWithSemeterPrefix)
     const students = getStudents(classCodeWithSemeterPrefix)
 
     if (
@@ -170,39 +185,29 @@ function getSubjects(compositeClassCodes: Set<string>, subjectExceptions: string
       !subjectExceptions.includes(subjectCode) &&
       !compositeClassCodes.has(classCode)
     ) {
-      const subject = {
+
+      const s: Subject = {
         name,
         domain,
         leaders: new Set<string>(leaders),
-        teachers: new Set<string>(leaders),
-        classes: new Map<string, Enrolments>()
+        teachers: new Set<string>(teachers),
       }
 
-      if (!compositeClassCodes.has(classCode)) {
-        subject.classes.set(classCode, {
-          students: new Set<string>(students),
-          teachers: new Set<string>()
-        })
-        if (teacher) {
-          subject.classes.get(classCode)?.teachers.add(teacher)
-        }
+      const c: Class = {
+        subjectCode,
+        name,
+        domain,
+        leaders: new Set<string>(leaders),
+        teachers: new Set<string>(teachers),
+        students: new Set<string>(students),
       }
 
-      subjects.set(subjectCode, subject)
-
-    } else {
-      if (!compositeClassCodes.has(classCode)) {
-        subjects.get(subjectCode)?.classes.set(classCode, {
-          students: new Set<string>(students),
-          teachers: new Set<string>(teacher)
-        })
-        if (teacher) {
-          subjects.get(subjectCode)?.teachers.add(teacher)
-        }
-      }
+      subjects.set(subjectCode, s)
+      classes.set(classCode, c)
     }
   }
-  return subjects
+  store.timetable.subjects = subjects
+  store.timetable.classes = classes
 }
 
 function getLeaders(domain: string): Set<string> | undefined {
@@ -242,16 +247,17 @@ function getStudents(classCode: string): Set<string> {
   return students
 }
 
-function getTeacher(classCode: string): string {
-  let username = ''
+function getTeachers(subjectCode: string): Set<string> {
+  const teachers = new Set<string>()
 
   for (const row of timetable) {
-    if (classCode === row['Class Code']) {
+    const classCode = row['Class Code'] as string
+    if (classCode.includes(subjectCode)) {
       const teacher = row['Teacher Code'] as string
       if (teacher) {
-        username = teacher.toLowerCase() + gooogleDomain
+        teachers.add(teacher.toLowerCase() + gooogleDomain)
       }
     }
   }
-  return username
+  return teachers
 }
