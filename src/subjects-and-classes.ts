@@ -186,6 +186,8 @@ export function addSubjectsAndClassesToStore(
       !compositeClassCodes.has(classCode)
     ) {
 
+      leaders?.forEach(leader => teachers.add(leader))
+
       const s: Subject = {
         name,
         domain,
@@ -206,6 +208,7 @@ export function addSubjectsAndClassesToStore(
       classes.set(classCode, c)
     }
   }
+
   store.timetable.subjects = subjects
   store.timetable.classes = classes
 }
@@ -247,12 +250,12 @@ function getStudents(classCode: string): Set<string> {
   return students
 }
 
-function getTeachers(subjectCode: string): Set<string> {
+function getTeachers(code: string): Set<string> {
   const teachers = new Set<string>()
 
   for (const row of timetable) {
     const classCode = row['Class Code'] as string
-    if (classCode.includes(subjectCode)) {
+    if (classCode.includes(code)) {
       const teacher = row['Teacher Code'] as string
       if (teacher) {
         teachers.add(teacher.toLowerCase() + gooogleDomain)
