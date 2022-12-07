@@ -1,6 +1,6 @@
 import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
-import { Enrolments, Subject } from './subjects-and-classes.ts'
+import { Enrolments, Subject, Class } from './subjects-and-classes.ts'
 import appSettings from '../config/config.ts'
 
 export interface CourseTask {
@@ -33,13 +33,18 @@ type TimetabledClass = {
   classCode: string, students: string[]
 } | { classCode: string, teachers: string[] }
 
+// deno-lint-ignore require-await
 export async function addSubjectAndClassTasksToStore(store: Store) {
-  for (const [subjectcode, subject] of store.timetable.subjects) {
-    addSubjectTasksToStore(store, subjectcode, subject)
-    addClassTasksToStore(store, subject)
+  for (const [subjectcode, s] of store.timetable.subjects) {
+    addSubjectTasksToStore(store, subjectcode, s)
+  }
+
+  for (const [classCode, c] of store.timetable.classes) {
+    addClassTasksToStore(store, classCode, c)
   }
 }
 
+// deno-lint-ignore require-await
 export async function addCompositeClassTasksToStore(store: Store) {
   for (const [classKey, _c] of store.timetable.compositeClasses) {
     const alias = `${appSettings.academicYear}-${classKey}`
@@ -99,61 +104,54 @@ function addSubjectTasksToStore(
   })
 }
 
-function addClassTasksToStore(store: Store, subject: Subject) {
-  const classes = subject.classes
+function addClassTasksToStore(store: Store, classCode: string, c: Class) {
+  const alias = `${appSettings.academicYear}-${classCode}`
 
-  for (const [classcode, _students] of classes) {
-    const alias = `${appSettings.academicYear}-${classcode}`
-    const attributes = {
-      id: alias,
-      ownerId: appSettings.classadmin,
-      name: subject.name,
-      section: subject.name,
-      description: `Domain: ${subject.domain} - ${subject.name}`,
-      descriptionHeading: `Subject Domain: ${subject.domain}`,
-      courseState: 'ACTIVE'
-    }
+  const attributes = {
+    id: alias,
+    ownerId: appSettings.classadmin,
+    name: c.name,
+    section: c.name,
+    description: `Domain: ${c.domain} - ${c.name}`,
+    descriptionHeading: `Subject Domain: ${c.domain}`,
+    courseState: 'ACTIVE'
+  }
 
-    if (!store.remote.courseAliases.has(alias)) {
-      store.tasks.courseCreationTasks.push({
-        type: 'create',
-        attributes
-      })
-    }
-
-    store.tasks.courseUpdateTasks.push({
-      type: 'update',
+  if (!store.remote.courseAliases.has(alias)) {
+    store.tasks.courseCreationTasks.push({
+      type: 'create',
       attributes
     })
   }
+
+  store.tasks.courseUpdateTasks.push({
+    type: 'update',
+    attributes
+  })
 }
 
 export async function addStudentEnrolmentTasksToStore(store: Store) {
   const auth = store.auth
-  console.log(1)
   let timetabledClasses: TimetabledClass[] = []
 
-  const compositeStudents = getEnrolmentsForClass(
+  const compositeEnrollments = getEnrolmentsForClass(
     store,
     'students',
     store.timetable.compositeClasses
   )
 
-  timetabledClasses = timetabledClasses.concat(compositeStudents)
+  timetabledClasses = timetabledClasses.concat(compositeEnrollments)
 
+  const enrollments = getEnrolmentsForClass(
+    store,
+    'students',
+    store.timetable.classes
+  )
 
-  for (const [_subjectCode, subject] of store.timetable.subjects) {
-    const classStudents = getEnrolmentsForClass(
-      store,
-      'students',
-      subject.classes
-    )
-
-    if (classStudents.length) {
-      timetabledClasses = timetabledClasses.concat(classStudents)
-    }
+  if (enrollments.length) {
+    timetabledClasses = timetabledClasses.concat(enrollments)
   }
-  console.log(timetabledClasses)
+
   const remoteCourseEnrolments = await Promise.all(
     timetabledClasses.map(async (ttClass, index) => {
 
@@ -169,28 +167,27 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
     })
   )
 
-  for (const ttClass of timetabledClasses) {
-    const alias = `${appSettings.academicYear}-${ttClass.classCode}`
+  for (const tc of timetabledClasses) {
+    const alias = `${appSettings.academicYear}-${tc.classCode}`
 
-    if ('students' in ttClass) {
-      console.log(2)
-      const students = ttClass.students
+    if ('students' in tc) {
+
+      const students = tc.students
       const hasRemoteCourse = remoteCourseEnrolments.filter(match => {
         if (match) {
-          return match.courseAlias === alias
+          return match.courseId === alias
         }
       })
 
       if (hasRemoteCourse.length) {
-        console.log('remote course has')
         for (const remoteCourse of remoteCourseEnrolments) {
+
           if (remoteCourse.courseId === alias) {
-            console.log('true')
-            const diffedStudents = differentiateArrayElements(
+            const diffedStudents = diffArrays(
               students,
               remoteCourse.students as string[]
             )
-            console.log('diffed', diffedStudents)
+
             const studentsToAdd = diffedStudents.arr1Diff
             studentsToAdd.forEach((student) => {
               store.tasks.enrolmentTasks.push({
@@ -238,7 +235,7 @@ function getEnrolmentsForClass(
   return timetabledClasses
 }
 
-function differentiateArrayElements(arr1: string[], arr2: string[]) {
+function diffArrays(arr1: string[], arr2: string[]) {
   const arr1Diff = arr1.filter(item => !arr2.includes(item))
   const arr2Diff = arr2.filter(item => !arr1.includes(item))
 
