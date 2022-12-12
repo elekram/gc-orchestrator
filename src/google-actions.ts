@@ -8,12 +8,10 @@ export async function listCourseMembers(
   index: number,
   total: number
 ) {
+  index = index + 1
+
   const path = 'https://classroom.googleapis.com/v1/courses/'
   const id = encodeURIComponent(`d:${courseId}`)
-
-  if (index > 1) {
-    index = index + 1
-  }
 
   const delay = index * appSettings.taskDelay
   await sleep(delay)
@@ -91,11 +89,9 @@ export async function getCourseAliases(
   index: number,
   total: number
 ) {
-  const id = `${encodeURIComponent(courseId)}`
+  index = index + 1
 
-  if (index > 1) {
-    index = index + 1
-  }
+  const id = `${encodeURIComponent(courseId)}`
 
   const delay = index * appSettings.taskDelay
   await sleep(delay)
@@ -138,9 +134,7 @@ export async function addCourseMember(
   index: number,
   total: number
 ) {
-  if (index > 1) {
-    index = index + 1
-  }
+  index = index + 1
 
   const type = props.type
   const courseId = `${encodeURIComponent(`d:${props.courseId}`)}`
@@ -176,9 +170,7 @@ export async function removeCourseMember(
   index: number,
   total: number
 ) {
-  if (index > 1) {
-    index = index + 1
-  }
+  index = index + 1
 
   const type = props.type
   const id = `${encodeURIComponent(`d:${props.courseId}`)}`
@@ -217,13 +209,10 @@ export async function createCourse(
   index: number,
   total: number
 ) {
+  index = index + 1
+
   const courseId = props.requestBody.id
   props.requestBody.id = `d:${props.requestBody.id}`
-
-  index = index || 0
-  total = total || 0
-
-  index = index + 1
 
   const delay = index * appSettings.taskDelay
   await sleep(delay)
@@ -239,7 +228,35 @@ export async function createCourse(
     body
   })
   const data = await processResponse(response)
-  console.log(data,)
+  console.log(`%c[ Created course ${courseId} - Status ${data.status} ]\n`, 'color:green')
+}
+
+export async function deleteCourse(
+  auth: GoogleAuth,
+  courseId: string,
+  index: number,
+  total: number
+) {
+  index = index + 1
+
+  const id = encodeURIComponent(`d:${courseId}`)
+  const path = 'https://classroom.googleapis.com/v1/courses'
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(`Deleting course: ${courseId} - ${index} of ${total} tasks`)
+
+  const response = await fetch(
+    `${path}/${id}`,
+    {
+      method: 'GET',
+      headers: getHeaders(auth)
+    }
+  )
+
+  const data = await processResponse(response)
+  console.log(`%c[ Deleted course ${courseId} - Status ${data.status} ]\n`, 'color:green')
 }
 
 interface UpdateCourseProps {
@@ -261,9 +278,6 @@ export async function updateCourse(
   index: number,
   total: number
 ) {
-  index = index || 0
-  total = total || 0
-
   index = index + 1
 
   const courseId = `${props.courseId}`
@@ -275,7 +289,7 @@ export async function updateCourse(
   const delay = index * appSettings.taskDelay
   await sleep(delay)
 
-  console.log(`Patching course properties for ${courseId} - ${index} of ${total} tasks`)
+  console.log(`\nPatching course ${courseId} - ${index} of ${total} tasks`)
 
   const response = await fetch(
     `${path}/d:${courseId}/?${updateMask}`, {
@@ -286,6 +300,32 @@ export async function updateCourse(
 
   const data = await processResponse(response)
   console.log(`%c[ Patch course: ${courseId} - ${data.status} ]\n`, 'color:green')
+}
+
+export async function changeCourseOwner(
+  auth: GoogleAuth,
+  courseId: string,
+  newOwner: string
+) {
+  const id = encodeURIComponent(courseId)
+  const updateMask = 'updateMask=ownerId'
+  const path = 'https://classroom.googleapis.com/v1/courses'
+
+  const body = JSON.stringify({
+    ownerId: newOwner
+  })
+
+  console.log(`\nPatching course ${courseId}`)
+
+  const response = await fetch(
+    `${path}/d:${id}/?${updateMask}`, {
+    method: 'PATCH',
+    headers: getHeaders(auth),
+    body
+  })
+
+  const data = await processResponse(response)
+  console.log(`%c[ Changed owner for ${courseId} to ${courseId} - ${data.status} ]\n`, 'color:green')
 }
 
 async function processResponse(r: Response) {

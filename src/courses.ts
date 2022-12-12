@@ -1,4 +1,3 @@
-//import google from 'npm:googleapis@109.0.1'
 import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
 import appSettings from '../config/config.ts'
@@ -6,7 +5,8 @@ import appSettings from '../config/config.ts'
 export async function addCoursesToStore(store: Store) {
   const auth = store.auth
   const courses = await googleClassroom.listCourses(
-    auth, 'teacherId',
+    auth,
+    'teacherId',
     appSettings.classadmin
   )
 

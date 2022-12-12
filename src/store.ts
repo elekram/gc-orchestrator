@@ -1,12 +1,12 @@
-// import { readRecord } from 'https://deno.land/std@0.162.0/encoding/csv/_io.ts'
 import { GoogleAuth } from './google-jwt-sa.ts'
-import { Subject, Enrolments } from './subjects-and-classes.ts'
+import { Subject, Enrolments, Class } from './subjects-and-classes.ts'
 import { CourseTask, EnrolmentTask } from './tasks.ts'
 
 export interface Store {
   auth: GoogleAuth
   timetable: {
     subjects: Map<string, Subject>
+    classes: Map<string, Class>
     compositeClasses: Map<string, Enrolments>
   }
   remote: {
@@ -16,6 +16,7 @@ export interface Store {
   tasks: {
     courseCreationTasks: CourseTask[]
     courseUpdateTasks: CourseTask[]
+    courseArchiveTasks: CourseTask[]
     enrolmentTasks: EnrolmentTask[]
   }
 }
@@ -28,6 +29,7 @@ export const store: Store = {
   },
   timetable: {
     subjects: new Map(),
+    classes: new Map(),
     compositeClasses: new Map(),
   },
   remote: {
@@ -37,6 +39,7 @@ export const store: Store = {
   tasks: {
     courseCreationTasks: [],
     courseUpdateTasks: [],
+    courseArchiveTasks: [],
     enrolmentTasks: []
   }
 }
