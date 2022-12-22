@@ -1,5 +1,6 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
 import appSettings from '../config/config.ts'
+import { tinyLogger } from './deps.ts'
 
 export async function listCourseMembers(
   auth: GoogleAuth,
@@ -19,12 +20,11 @@ export async function listCourseMembers(
   console.log(`%cFetching ${type} for course ${courseId} - ${index} of ${total} tasks`, 'color:lightblue')
 
   const response = await fetch(
-    `${path}${id}/${type}`,
-    {
-      method: 'GET',
-      headers: getHeaders(auth)
-    }
-  )
+    `${path}${id}/${type}`, {
+    method: 'GET',
+    headers: getHeaders(auth)
+  })
+
   const data = await processResponse(response)
 
   const members: string[] = []
@@ -62,12 +62,10 @@ export async function listCourses(
     const pageToken = `pageToken=${nextPageToken}`
 
     const response = await fetch(
-      `${path}?${id}&${pageSize}&${pageToken}`,
-      {
-        method: 'GET',
-        headers: getHeaders(auth)
-      }
-    )
+      `${path}?${id}&${pageSize}&${pageToken}`, {
+      method: 'GET',
+      headers: getHeaders(auth)
+    })
 
     const data = await processResponse(response)
 
@@ -78,8 +76,8 @@ export async function listCourses(
 
     nextPageToken = data.responseJson.nextPageToken
   } while (nextPageToken)
-  console.log(`\n%c[ ${courseCount} total courses fetched ]\n`, 'color:cyan')
 
+  console.log(`\n%c[ ${courseCount} total courses fetched ]\n`, 'color:cyan')
   return courses
 }
 
@@ -90,7 +88,6 @@ export async function getCourseAliases(
   total: number
 ) {
   index = index + 1
-
   const id = `${encodeURIComponent(courseId)}`
 
   const delay = index * appSettings.taskDelay
@@ -99,12 +96,11 @@ export async function getCourseAliases(
   console.log(`%cFetching alias for course ${courseId} - ${index} of ${total} tasks`, 'color:lightblue')
 
   const response = await fetch(
-    `https://classroom.googleapis.com/v1/courses/${id}/aliases`,
-    {
-      method: 'GET',
-      headers: getHeaders(auth)
-    }
-  )
+    `https://classroom.googleapis.com/v1/courses/${id}/aliases`, {
+    method: 'GET',
+    headers: getHeaders(auth)
+  })
+
   const data = await processResponse(response)
 
   const aliases: string[] = []
@@ -120,92 +116,83 @@ export async function getCourseAliases(
   }
 }
 
-interface CourseMemberProps {
+export interface CourseMemberProps {
   courseId: string
   type: 'teachers' | 'students'
+  action: 'POST' | 'DELETE'
   user: {
     userId: string
   }
 }
 
-export async function addCourseMember(
+export async function editCourseMembers(
   auth: GoogleAuth,
   props: CourseMemberProps,
   index: number,
   total: number
 ) {
   index = index + 1
-
   const type = props.type
+  const method = props.action
   const courseId = `${encodeURIComponent(`d:${props.courseId}`)}`
-  const userId = props.user.userId
+  const member = props.user.userId
+  const encodedMember = `${encodeURIComponent(`${props.user.userId}`)}`
+  const verb = props.action === 'POST' ? 'to' : 'from'
 
-  const path = 'https://classroom.googleapis.com/v1/courses'
-  const body = JSON.stringify(props.user)
+  let body = ''
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
+  const baseUrl = 'https://classroom.googleapis.com/v1/courses'
+  let requestUrl = ''
 
-  console.log(`%cAdding ${type.slice(0, -1)} ${userId} to course ${props.courseId} - ${index} of ${total} tasks`, 'color:lightblue')
+  switch (props.action) {
+    case 'POST':
+      requestUrl = `${baseUrl}/${courseId}/${type}`
+      body = JSON.stringify(props.user)
+      break
 
-  const response = await fetch(
-    `${path}/${courseId}/${type}`, {
-    method: 'POST',
-    headers: getHeaders(auth),
-    body
-  })
-  const data = await processResponse(response)
-  console.log(`%c[ ${userId} to ${props.courseId} - Status ${data.status} ]\n`, 'color:green')
-}
-
-interface RemoveMemberProps {
-  type: 'students' | 'teachers'
-  courseId: string
-  userId: string
-}
-
-export async function removeCourseMember(
-  auth: GoogleAuth,
-  props: RemoveMemberProps,
-  index: number,
-  total: number
-) {
-  index = index + 1
-
-  const type = props.type
-  const id = `${encodeURIComponent(`d:${props.courseId}`)}`
-  const member = encodeURIComponent(props.userId)
-  const path = 'https://classroom.googleapis.com/v1/courses'
-
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
-
-  console.log(`%cRemoving ${props.type.slice(0, -1)} ${props.userId} to course ${props.courseId} - ${index} of ${total} tasks`, 'color:lightblue')
-
-  const response = await fetch(
-    `${path}/${id}/${type}/${member}`, {
-    method: 'DELETE',
-    headers: getHeaders(auth),
-  })
-  const data = await processResponse(response)
-  console.log(`%c[ ${props.userId} from ${props.courseId} - Status ${data.status} ]\n`, 'color:green')
-}
-
-interface CreateCourseProps {
-  requestBody: {
-    id: string
-    name: string
-    section: string
-    description: string
-    descriptionHeading: string
-    courseState: string
-    ownerId: string
+    case 'DELETE':
+      requestUrl = `${baseUrl}/${courseId}/${type}/${encodedMember}`
+      break
   }
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(`%c${method} ${type.slice(0, -1)} ${member} ${verb} course ${props.courseId} - ${index} of ${total} tasks`, 'color:lightblue')
+
+  try {
+    const response = await fetch(
+      requestUrl, {
+      method,
+      headers: getHeaders(auth),
+      body
+    })
+    const data = await processResponse(response)
+    console.log(`%c[ ${method} ${member} ${verb} ${props.courseId} - Status ${data.status} ]\n`, 'color:green')
+  } catch (e) {
+    const errorSource = `Error: editCourseMembers() ${props.courseId} ${member}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+  }
+}
+
+interface Course {
+  id: string
+  name: string
+  section: string
+  description: string
+  descriptionHeading: string
+  courseState: string
+  ownerId: string
+}
+
+export interface CourseProps {
+  updateMask: string | undefined // 'name,section,description,descriptionHeading,room,courseState, ownerId'
+  requestBody: Course
 }
 
 export async function createCourse(
   auth: GoogleAuth,
-  props: CreateCourseProps,
+  props: CourseProps,
   index: number,
   total: number
 ) {
@@ -231,56 +218,14 @@ export async function createCourse(
   console.log(`%c[ Created course ${courseId} - Status ${data.status} ]\n`, 'color:green')
 }
 
-export async function deleteCourse(
-  auth: GoogleAuth,
-  courseId: string,
-  index: number,
-  total: number
-) {
-  index = index + 1
-
-  const id = encodeURIComponent(`d:${courseId}`)
-  const path = 'https://classroom.googleapis.com/v1/courses'
-
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
-
-  console.log(`Deleting course: ${courseId} - ${index} of ${total} tasks`)
-
-  const response = await fetch(
-    `${path}/${id}`,
-    {
-      method: 'GET',
-      headers: getHeaders(auth)
-    }
-  )
-
-  const data = await processResponse(response)
-  console.log(`%c[ Deleted course ${courseId} - Status ${data.status} ]\n`, 'color:green')
-}
-
-interface UpdateCourseProps {
-  courseId: string
-  updateMask: string // 'name,section,description,descriptionHeading,room,courseState, ownerId'
-  requestBody: {
-    name: string
-    section: string
-    description: string
-    descriptionHeading: string
-    courseState: string
-    ownerId?: string
-  }
-}
-
 export async function updateCourse(
   auth: GoogleAuth,
-  props: UpdateCourseProps,
+  props: CourseProps,
   index: number,
   total: number
 ) {
   index = index + 1
-
-  const courseId = `${props.courseId}`
+  const courseId = `${props.requestBody.id}`
   const updateMask = `updateMask=${props.updateMask}`
   const body = JSON.stringify(props.requestBody)
 
@@ -300,6 +245,32 @@ export async function updateCourse(
 
   const data = await processResponse(response)
   console.log(`%c[ Patch course: ${courseId} - ${data.status} ]\n`, 'color:green')
+}
+
+export async function deleteCourse(
+  auth: GoogleAuth,
+  courseId: string,
+  index: number,
+  total: number
+) {
+  index = index + 1
+
+  const id = encodeURIComponent(`d:${courseId}`)
+  const path = 'https://classroom.googleapis.com/v1/courses'
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(`Deleting course: ${courseId} - ${index} of ${total} tasks`)
+
+  const response = await fetch(
+    `${path}/${id}`, {
+    method: 'GET',
+    headers: getHeaders(auth)
+  })
+
+  const data = await processResponse(response)
+  console.log(`%c[ Deleted course ${courseId} - Status ${data.status} ]\n`, 'color:green')
 }
 
 export async function changeCourseOwner(
@@ -331,7 +302,7 @@ export async function changeCourseOwner(
 async function processResponse(r: Response) {
   if (!r.ok) {
     const responseJson = await r.json()
-    throw responseJson
+    throw responseJson.error
   }
   const status = `${r.status}: ${r.statusText}`
   const responseJson = await r.json()

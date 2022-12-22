@@ -1,32 +1,40 @@
-import * as log from 'https://deno.land/std@0.165.0/log/mod.ts'
+import { Store } from './store.ts'
+import { tinyLogger } from './deps.ts'
 
-export async function getLogger() {
-  await log.setup({
-    //define handlers
-    handlers: {
-      console: new log.handlers.ConsoleHandler("DEBUG", {
-        formatter: "{levelName} {msg}"
-      }),
-      file: new log.handlers.RotatingFileHandler('INFO', {
-        filename: './log/log.txt',
-        maxBytes: 10485760,
-        maxBackupCount: 1,
-        formatter: rec => JSON.stringify({ app: rec.datetime, level: rec.levelName, msg: rec.msg })
-      })
-    },
+export function logTasks(store: Store) {
+  const logLevel = 'info'
+  const fileName = `./log/task-log.csv`
+  const type = 'task'
 
-    //assign handlers to loggers  
-    loggers: {
-      default: {
-        level: "DEBUG",
-        handlers: ["console", "file"],
-      },
-      client: {
-        level: "INFO",
-        handlers: ["console", "file"]
-      }
-    },
-  });
-  const logger = log.getLogger("client")
-  return logger
+  for (const task of store.tasks.courseCreationTasks) {
+    const message = `${task.type} ${task.props.requestBody.id} state ${task.props.requestBody.courseState}`
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName
+    })
+  }
+
+  for (const task of store.tasks.courseUpdateTasks) {
+    const message = `${task.type} ${task.props.requestBody.id} state ${task.props.requestBody.courseState}`
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName
+    })
+  }
+
+  for (const task of store.tasks.courseArchiveTasks) {
+    const message = `${task.type} ${task.props.requestBody.id} state ${task.props.requestBody.courseState}`
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName
+    })
+  }
+
+  for (const task of store.tasks.enrolmentTasks) {
+    const message = `${task.type} ${task.action} ${task.user.userId} course ${task.courseId}`
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName
+    })
+  }
 }

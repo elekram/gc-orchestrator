@@ -1,6 +1,7 @@
 import { csv } from './deps.ts'
 import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
+import { tinyLogger } from './deps.ts'
 
 export interface Subject {
   name: string
@@ -11,6 +12,7 @@ export interface Subject {
 
 export interface Class {
   subjectCode: string
+  classCodeWithSemeterPrefix: string
   name: string
   domain: string
   leaders: Set<string>
@@ -115,6 +117,11 @@ function getUniqueLessons(classExceptions: string[]): Map<string, Lesson> {
 
   for (const row of timetable) {
     const classCode = row['Class Code'] as string
+
+    if (!isValidCode(classCode)) {
+      continue
+    }
+
     const teacher = row['Teacher Code'] as string
     const period = row['Period No'] as string
     const day = row['Day No'] as string
@@ -148,7 +155,6 @@ function filterCompositeClasses(uniqueLessons: Map<string, Lesson>,
           lesson.period === row['Period No'] &&
           lesson.teacher === row['Teacher Code']
         ) {
-
           const classes: Set<string> = new Set()
 
           classes.add(classCode)
@@ -170,11 +176,20 @@ export function addSubjectsAndClassesToStore(
   const classes: Map<string, Class> = new Map()
 
   for (const row of classNames) {
-    const name = (row['Subject Name'] as string).replace(/['"]+/g, '')
-    const subjectCode = (row['Subject Code'] as string).substring(1)
     const subjectCodeWithSemeterPrefix = row['Subject Code'] as string
-    const classCode = (row['Class Code'] as string).substring(1)
     const classCodeWithSemeterPrefix = row['Class Code'] as string
+
+    if (!isValidCode(subjectCodeWithSemeterPrefix)) {
+      continue
+    }
+
+    if (!isValidCode(classCodeWithSemeterPrefix)) {
+      continue
+    }
+
+    const subjectCode = (row['Subject Code'] as string).substring(1)
+    const classCode = (row['Class Code'] as string).substring(1)
+    const name = (row['Subject Name'] as string).replace(/['"]+/g, '')
     const domain = (row['Faculty Name'] as string).split('_')[0].toUpperCase()
     const leaders = getLeaders(domain)
     const teachers = getTeachers(subjectCodeWithSemeterPrefix)
@@ -197,6 +212,7 @@ export function addSubjectsAndClassesToStore(
 
       const c: Class = {
         subjectCode,
+        classCodeWithSemeterPrefix,
         name,
         domain,
         leaders: new Set<string>(leaders),
@@ -217,7 +233,7 @@ function getLeaders(domain: string): Set<string> | undefined {
   const domains: Map<string, Set<string>> = new Map()
 
   for (const row of unscheduledDuties) {
-    const hasDomainLeaderRow: boolean = (row['Duty Name'] as string).includes('Domain Leader')
+    const hasDomainLeaderRow: boolean = (row['Duty Name'] as string).includes('Google Domain Leader')
 
     if (hasDomainLeaderRow) {
       const domainName = (row['Duty Name'] as string).split('_')[1].toUpperCase()
@@ -263,4 +279,69 @@ function getTeachers(code: string): Set<string> {
     }
   }
   return teachers
+}
+
+function isValidCode(code: string): boolean {
+  let isValid = true
+  const validYearLevels = ['01', '07', '08', '09', '10', '11', '12']
+  const validSemesterNumbers = /[1|2]/
+  const isNumber = /[0-9]/
+  const isLetter = /[A-Z]/
+
+  const prefix = code[0]
+
+  if (!validSemesterNumbers.test(prefix)) {
+    isValid = false
+  }
+
+  if (code.length < 6) {
+    isValid = false
+  }
+
+  const qualifier = code.charAt(4)
+
+  if (isNumber.test(qualifier)) {
+    // code with 3 letter subject 
+    if (!/^[A-Z]+$/.test(code.substring(1, 4))) {
+      isValid = false
+    }
+
+    if (!validYearLevels.includes(code.substring(6, 4))) {
+      isValid = false
+    }
+
+    if (code.length > 6) {
+      if (!/^[A-Z|0-9]+$/.test(code.substring(6))) {
+        isValid = false
+      }
+    }
+
+  } else if (isLetter.test(qualifier)) {
+    // code with 4 letter subject 
+    if (!/^[A-Z]+$/.test(code.substring(1, 5))) {
+      isValid = false
+    }
+
+    if (!validYearLevels.includes(code.substring(5, 7))) {
+      isValid = false
+    }
+
+    if (code.length > 7) {
+      if (!/^[A-Z|0-9]+$/.test(code.substring(7))) {
+        isValid = false
+      }
+    }
+  }
+
+  if (!isValid) {
+    const logLevel = 'warn'
+    const type = 'ƒ-isValidCode'
+    const message = `Skipping invalid code ${code}`
+
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName: './log/log.csv'
+    })
+  }
+  return isValid
 }

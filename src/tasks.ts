@@ -1,29 +1,25 @@
 import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
 import { Enrolments } from './subjects-and-classes.ts'
+import { diffArrays } from './diff-arrays.ts'
 import appSettings from '../config/config.ts'
 
 export interface CourseTask {
   type: 'create' |
   'update' |
   'archive'
-  attributes: {
-    id: string
-    ownerId?: string
-    name?: string
-    section?: string
-    description?: string
-    descriptionHeading?: string,
-    courseState?: string
+  props: {
+    updateMask: string
+    requestBody: {
+      id: string
+      ownerId: string
+      name: string
+      section: string
+      description: string
+      descriptionHeading: string,
+      courseState: string
+    }
   }
-}
-
-export interface EnrolmentTask {
-  type: 'students' | 'teachers'
-  action: 'POST' | 'DELETE'
-  id: string
-  student?: string
-  teacher?: string
 }
 
 type TimetabledClass = {
@@ -38,8 +34,8 @@ export async function addCompositeClassTasksToStore(store: Store) {
     const name = `${classCode} (Composite)`
     const description = `Composite Class (${classCode})`
 
-    const attributes = {
-      id: `d:${alias}`,
+    const course = {
+      id: alias,
       ownerId: appSettings.classadmin,
       name,
       section: name,
@@ -51,13 +47,19 @@ export async function addCompositeClassTasksToStore(store: Store) {
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
         type: 'create',
-        attributes
+        props: {
+          updateMask: '',
+          requestBody: course
+        }
       })
     }
 
     store.tasks.courseUpdateTasks.push({
       type: 'update',
-      attributes
+      props: {
+        updateMask: 'name,section,description,descriptionHeading,courseState',
+        requestBody: course
+      }
     })
   }
 }
@@ -66,12 +68,12 @@ export async function addCompositeClassTasksToStore(store: Store) {
 export async function addSubjectTasksToStore(store: Store) {
   for (const [subjectCode, s] of store.timetable.subjects) {
     const alias = `SUBJ-${subjectCode}`
-    const attributes = {
-      id: `d:${alias}`,
+    const course = {
+      id: alias,
       ownerId: appSettings.classadmin,
       name: `${subjectCode} (Teachers)`,
       section: s.name,
-      description: `Domain: ${s.domain} - ${s.name} (Teachers)`,
+      description: `Domain: ${s.domain} - ${s.name} (Teacher Planning Classroom)`,
       descriptionHeading: `Subject Domain: ${s.domain}`,
       courseState: 'ACTIVE'
     }
@@ -79,13 +81,19 @@ export async function addSubjectTasksToStore(store: Store) {
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
         type: 'create',
-        attributes
+        props: {
+          updateMask: '',
+          requestBody: course
+        }
       })
     }
 
     store.tasks.courseUpdateTasks.push({
       type: 'update',
-      attributes
+      props: {
+        updateMask: 'name,section,description,descriptionHeading,courseState',
+        requestBody: course
+      }
     })
   }
 }
@@ -97,12 +105,12 @@ export async function addClassTasksToStore(store: Store) {
     const academicYear = getAcademicYearForClasscode(classCode)
     const alias = `${academicYear}-${classCode}`
 
-    const attributes = {
-      id: `d:${alias}`,
+    const course = {
+      id: alias,
       ownerId: appSettings.classadmin,
-      name: c.name,
+      name: c.classCodeWithSemeterPrefix,
       section: c.name,
-      description: `Domain: ${c.domain} - ${c.name}`,
+      description: `Domain: ${c.domain} - ${c.name} (${c.classCodeWithSemeterPrefix})`,
       descriptionHeading: `Subject Domain: ${c.domain}`,
       courseState: 'ACTIVE'
     }
@@ -110,13 +118,19 @@ export async function addClassTasksToStore(store: Store) {
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
         type: 'create',
-        attributes
+        props: {
+          updateMask: '',
+          requestBody: course
+        }
       })
     }
 
     store.tasks.courseUpdateTasks.push({
       type: 'update',
-      attributes
+      props: {
+        updateMask: 'name,section,description,descriptionHeading,courseState',
+        requestBody: course
+      }
     })
   }
 
@@ -126,22 +140,24 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
   const auth = store.auth
   let timetabledClasses: TimetabledClass[] = []
 
-  const compositeEnrollments = getEnrolmentsForClass(
+  const compositeClassEnrollments = getEnrolmentsForClass(
     store,
     'students',
     store.timetable.compositeClasses
   )
 
-  timetabledClasses = timetabledClasses.concat(compositeEnrollments)
-
-  const enrollments = getEnrolmentsForClass(
+  const classEnrollments = getEnrolmentsForClass(
     store,
     'students',
     store.timetable.classes
   )
 
-  if (enrollments.length) {
-    timetabledClasses = timetabledClasses.concat(enrollments)
+  if (compositeClassEnrollments.length) {
+    timetabledClasses = timetabledClasses.concat(compositeClassEnrollments)
+  }
+
+  if (classEnrollments.length) {
+    timetabledClasses = timetabledClasses.concat(classEnrollments)
   }
 
   const remoteCourseEnrolments = await Promise.all(
@@ -187,9 +203,11 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
               store.tasks.enrolmentTasks.push({
                 type: 'students',
                 action: 'POST',
-                id: remoteCourse.courseId as string,
-                student
-              })
+                courseId: remoteCourse.courseId as string,
+                user: {
+                  userId: student
+                }
+              } as googleClassroom.CourseMemberProps)
             }
 
             const studentsToRemove = diffedStudents.arr2Diff
@@ -197,9 +215,11 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
               store.tasks.enrolmentTasks.push({
                 type: 'students',
                 action: 'DELETE',
-                id: remoteCourse.courseId as string,
-                student
-              })
+                courseId: remoteCourse.courseId as string,
+                user: {
+                  userId: student
+                }
+              } as googleClassroom.CourseMemberProps)
             }
           }
         }
@@ -272,9 +292,11 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
               store.tasks.enrolmentTasks.push({
                 type: 'teachers',
                 action: 'POST',
-                id: remoteCourse.courseId as string,
-                teacher
-              })
+                courseId: remoteCourse.courseId as string,
+                user: {
+                  userId: teacher
+                }
+              } as googleClassroom.CourseMemberProps)
             }
 
             const teachersToRemove = diffedTeachers.arr2Diff
@@ -291,15 +313,16 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
               store.tasks.enrolmentTasks.push({
                 type: 'teachers',
                 action: 'DELETE',
-                id: remoteCourse.courseId as string,
-                teacher
-              })
+                courseId: remoteCourse.courseId as string,
+                user: {
+                  userId: teacher
+                }
+              } as googleClassroom.CourseMemberProps)
             }
           }
         }
       }
     }
-
   }
 }
 
@@ -341,16 +364,36 @@ export async function addCourseArchiveTasksToStore(store: Store) {
   const diffedCourses = diffArrays(currentTimetabledClasses, remoteCourseCandidates)
 
   for (const alias of diffedCourses.arr2Diff) {
+    const id = store.remote.courseAliases.get(alias)
 
-    const attributes = {
-      id: alias,
-      courseState: 'ARCHIVED'
+    if (!id) {
+      throw 'addCourseArchiveTasksToStore: Id Not found'
+    }
+
+    const course = store.remote.courses.get(id) as {
+      name: string,
+      section: string,
+      descriptionHeading: string,
+      description: string
+    }
+
+    const props = {
+      updateMask: 'name,section,description,descriptionHeading,courseState',
+      requestBody: {
+        id: alias,
+        name: course.name,
+        section: course.section,
+        description: course.description,
+        descriptionHeading: course.descriptionHeading,
+        courseState: 'ARCHIVED',
+        ownerId: appSettings.classadmin
+      }
     }
 
     if (store.remote.courseAliases.has(alias)) {
       store.tasks.courseArchiveTasks.push({
         type: 'archive',
-        attributes
+        props
       })
     }
   }
@@ -376,16 +419,6 @@ function getEnrolmentsForClass(
     }
   }
   return timetabledClasses
-}
-
-function diffArrays(arr1: string[], arr2: string[]) {
-  const arr1Diff = arr1.filter(item => !arr2.includes(item))
-  const arr2Diff = arr2.filter(item => !arr1.includes(item))
-
-  return {
-    arr1Diff,
-    arr2Diff
-  }
 }
 
 function getCurrentAcademicYearSet() {

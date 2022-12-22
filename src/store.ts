@@ -1,6 +1,7 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
 import { Subject, Enrolments, Class } from './subjects-and-classes.ts'
-import { CourseTask, EnrolmentTask } from './tasks.ts'
+import { CourseTask } from './tasks.ts'
+import { CourseMemberProps } from './google-actions.ts'
 
 export interface Store {
   auth: GoogleAuth
@@ -17,7 +18,7 @@ export interface Store {
     courseCreationTasks: CourseTask[]
     courseUpdateTasks: CourseTask[]
     courseArchiveTasks: CourseTask[]
-    enrolmentTasks: EnrolmentTask[]
+    enrolmentTasks: CourseMemberProps[]
   }
 }
 

@@ -9,7 +9,6 @@ export default function testSubjects(store: Store) {
 
   for (const [key, s] of store.timetable.subjects) {
 
-
     if (!s.domain) {
       isWarning = true
       const logLevel = 'warn'
