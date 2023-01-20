@@ -58,12 +58,6 @@ const appSettings = {
     'https://www.googleapis.com/auth/classroom.rosters.readonly',
     'https://www.googleapis.com/auth/classroom.profile.emails',
     'https://www.googleapis.com/auth/classroom.profile.photos',
-    'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.events.readonly',
-    'https://www.googleapis.com/auth/calendar.settings.readonly',
-    'https://www.googleapis.com/auth/calendar.addons.execute'
   ],
   csvFileLocation: './csv/',
   classNamesCsv: 'Class Names.csv',
