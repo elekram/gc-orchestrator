@@ -38,7 +38,7 @@ This file is auto generated and should match your project details
 
 ## Example Config
 **Example config.ts file**
-```json
+```ts
 const academicYearMap = {
   '01': '2023',
   '07': '2023',
