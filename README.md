@@ -4,8 +4,8 @@ Synchronises CSV files generated from our school's timetable using the Google Cl
 ## Table of Contents
 
 1. [Setup](https://github.com/telekram/gc-orchestrator#setup)
-2. [Example Service Account](https://github.com/telekram/gc-orchestrator#Example-Service-Account-JSON)
-3. [Example Config File](https://github.com/telekram/gc-orchestrator#Example-Config)
+2. [Example Service Account](https://github.com/telekram/gc-orchestrator#example-service-account-json)
+3. [Example Config File](https://github.com/telekram/gc-orchestrator#example-config)
 
 ## Setup
 
