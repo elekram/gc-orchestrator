@@ -1,6 +1,5 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
 import appSettings from '../config/config.ts'
-import { tinyLogger } from './deps.ts'
 
 export async function listCourseMembers(
   auth: GoogleAuth,
@@ -170,7 +169,7 @@ export async function editCourseMembers(
     const data = await processResponse(response)
     console.log(`%c[ ${method} ${member} ${verb} ${props.courseId} - Status ${data.status} ]\n`, 'color:green')
   } catch (e) {
-    const errorSource = `Error: editCourseMembers() ${props.courseId} ${member}`
+    const errorSource = `Error: editCourseMembers() ${props.courseId} - ${member}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
   }
 }
@@ -208,14 +207,21 @@ export async function createCourse(
 
   const body = JSON.stringify(props.requestBody)
 
-  const response = await fetch(
-    `https://classroom.googleapis.com/v1/courses`, {
-    method: 'POST',
-    headers: getHeaders(auth),
-    body
-  })
-  const data = await processResponse(response)
-  console.log(`%c[ Created course ${courseId} - Status ${data.status} ]\n`, 'color:green')
+  try {
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses`, {
+      method: 'POST',
+      headers: getHeaders(auth),
+      body
+    })
+    const data = await processResponse(response)
+    console.log(`%c[ Created course ${courseId} - Status ${data.status} ]\n`, 'color:green')
+  } catch (e) {
+    const errorSource = `Error: createCourse() ${courseId}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    console.log('Script must exit if course cannot be created')
+    Deno.exit(1)
+  }
 }
 
 export async function updateCourse(
@@ -236,15 +242,20 @@ export async function updateCourse(
 
   console.log(`\nPatching course ${courseId} - ${index} of ${total} tasks`)
 
-  const response = await fetch(
-    `${path}/d:${courseId}/?${updateMask}`, {
-    method: 'PATCH',
-    headers: getHeaders(auth),
-    body
-  })
+  try {
+    const response = await fetch(
+      `${path}/d:${courseId}/?${updateMask}`, {
+      method: 'PATCH',
+      headers: getHeaders(auth),
+      body
+    })
 
-  const data = await processResponse(response)
-  console.log(`%c[ Patch course: ${courseId} - ${data.status} ]\n`, 'color:green')
+    const data = await processResponse(response)
+    console.log(`%c[ Patched course: ${courseId} - ${data.status} ]\n`, 'color:green')
+  } catch (e) {
+    const errorSource = `Error: updateCourse() ${courseId}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+  }
 }
 
 export async function deleteCourse(
@@ -265,7 +276,7 @@ export async function deleteCourse(
 
   const response = await fetch(
     `${path}/${id}`, {
-    method: 'GET',
+    method: 'DELETE',
     headers: getHeaders(auth)
   })
 

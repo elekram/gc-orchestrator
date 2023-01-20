@@ -19,6 +19,7 @@ export interface Store {
     courseUpdateTasks: CourseTask[]
     courseArchiveTasks: CourseTask[]
     enrolmentTasks: CourseMemberProps[]
+    courseDeletionTasks: string[]
   }
 }
 
@@ -41,7 +42,8 @@ export const store: Store = {
     courseCreationTasks: [],
     courseUpdateTasks: [],
     courseArchiveTasks: [],
-    enrolmentTasks: []
+    enrolmentTasks: [],
+    courseDeletionTasks: []
   }
 }
 

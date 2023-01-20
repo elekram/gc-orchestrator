@@ -306,7 +306,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
                 continue
               }
 
-              if (appSettings.teacherAides.includes(teacher.toLocaleLowerCase())) {
+              if (appSettings.teacherAides.includes(teacher.toLowerCase())) {
                 continue
               }
 
@@ -367,7 +367,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
     const id = store.remote.courseAliases.get(alias)
 
     if (!id) {
-      throw 'addCourseArchiveTasksToStore: Id Not found'
+      throw 'addCourseArchiveTasksToStore(): Id Not found'
     }
 
     const course = store.remote.courses.get(id) as {
@@ -399,6 +399,32 @@ export async function addCourseArchiveTasksToStore(store: Store) {
   }
 }
 
+// deno-lint-ignore require-await
+export async function addCourseDeletionTasksToStore(store: Store) {
+  const currentAcademicCourseYears = getCurrentAcademicYearSet()
+  const yearValues: number[] = []
+  appSettings.academicYearMap.forEach(year => {
+    yearValues.push(parseInt(year))
+  })
+
+  const lowestRelevantCourseYear = (Math.min(...yearValues) - 1)
+
+  for (const [courseAlias, _id] of store.remote.courseAliases) {
+
+    const aliasPrefix = courseAlias.substring(0, 4)
+
+    if (aliasPrefix === 'SUBJ') {
+      continue
+    }
+
+    if (!currentAcademicCourseYears.has(aliasPrefix)) {
+      if (parseInt(aliasPrefix) < lowestRelevantCourseYear) {
+        store.tasks.courseDeletionTasks.push(courseAlias)
+      }
+    }
+  }
+}
+
 function getEnrolmentsForClass(
   store: Store,
   type: 'students' | 'teachers',
@@ -422,11 +448,11 @@ function getEnrolmentsForClass(
 }
 
 function getCurrentAcademicYearSet() {
-  const relaventYears = new Set()
+  const releventYears = new Set()
   for (const [_yearlevel, year] of appSettings.academicYearMap) {
-    relaventYears.add(year)
+    releventYears.add(year)
   }
-  return relaventYears
+  return releventYears
 }
 
 function getAcademicYearForClasscode(classCode: string) {
@@ -435,14 +461,14 @@ function getAcademicYearForClasscode(classCode: string) {
   const matchedDecimalsArray = [...classCode.matchAll(decimalChars)];
 
   const decimalsArray = matchedDecimalsArray.flat()
-  let relaventYear = ''
+  let releventYear = ''
 
   if (decimalsArray.length === 1) {
     const yearLevel = decimalsArray[0].slice(0, 2)
     const year = appSettings.academicYearMap.get(yearLevel)
 
     if (typeof year === 'string') {
-      relaventYear = year
+      releventYear = year
     }
   }
 
@@ -451,13 +477,13 @@ function getAcademicYearForClasscode(classCode: string) {
     const year = appSettings.academicYearMap.get(yearLevel)
 
     if (typeof year === 'string') {
-      relaventYear = year
+      releventYear = year
     }
   }
 
-  if (!relaventYear) {
+  if (!releventYear) {
     throw `Error: getAcademicYearForClasscode(classCode: ${classCode}) -> Year level code undefined`
   }
 
-  return relaventYear
+  return releventYear
 }

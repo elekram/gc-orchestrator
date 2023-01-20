@@ -37,4 +37,12 @@ export function logTasks(store: Store) {
       fileName
     })
   }
+
+  for (const task of store.tasks.courseDeletionTasks) {
+    const message = `DELETE course ${task}`
+    tinyLogger.log(type, message, {
+      logLevel,
+      fileName
+    })
+  }
 }

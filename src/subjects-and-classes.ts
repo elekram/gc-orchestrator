@@ -195,31 +195,29 @@ export function addSubjectsAndClassesToStore(
     const teachers = getTeachers(subjectCodeWithSemeterPrefix)
     const students = getStudents(classCodeWithSemeterPrefix)
 
+    leaders?.forEach(leader => teachers.add(leader))
+
+    const s: Subject = {
+      name,
+      domain,
+      leaders: new Set<string>(leaders),
+      teachers: new Set<string>(teachers),
+    }
+
+    const c: Class = {
+      subjectCode,
+      classCodeWithSemeterPrefix,
+      name,
+      domain,
+      leaders: new Set<string>(leaders),
+      teachers: new Set<string>(teachers),
+      students: new Set<string>(students),
+    }
+
     if (
-      !subjects.has(subjectCode) &&
       !subjectExceptions.includes(subjectCode) &&
       !compositeClassCodes.has(classCode)
     ) {
-
-      leaders?.forEach(leader => teachers.add(leader))
-
-      const s: Subject = {
-        name,
-        domain,
-        leaders: new Set<string>(leaders),
-        teachers: new Set<string>(teachers),
-      }
-
-      const c: Class = {
-        subjectCode,
-        classCodeWithSemeterPrefix,
-        name,
-        domain,
-        leaders: new Set<string>(leaders),
-        teachers: new Set<string>(teachers),
-        students: new Set<string>(students),
-      }
-
       subjects.set(subjectCode, s)
       classes.set(classCode, c)
     }
