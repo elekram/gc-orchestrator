@@ -36,11 +36,11 @@ export function processArgs(rawArgs: string[]) {
     console.log('\n%cNAME', 'color:yellow')
     console.log('  Google Classroom Sync\n')
     console.log('%cDESCRIPTION', 'color:yellow')
-    console.log('  Generate and sync subjects and classes using exported CSV files from Timetabler to courses on Google Classroom.\n')
+    console.log('  Synchronise Google Classrom courses and course members to school Timetabler CSV files.\n')
     console.log('%cFLAG EXAMPLES', 'color:yellow')
-    console.log('  --Run-Tasks        : Looks up timetable CSV files and creates new Google courses if they don\'t already exist.\n')
-    console.log('  --Show-Tasks       : Displays the generated task objects on screen instead of executing them.\n')
-    console.log('  --Show-Aliases     : Display course ID to alias map.\n')
+    console.log('  --Run-Tasks        : Run tasks generated from timetable CSVs.\n')
+    console.log('  --Show-Tasks       : Log generated task objects to screen instead of executing them.\n')
+    console.log('  --Show-Aliases     : Log course ID to alias map to screen.\n')
     console.log('\n%c' + exceptionMsg + '\n', 'color:red')
   }
 }

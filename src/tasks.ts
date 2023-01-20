@@ -345,7 +345,6 @@ export async function addCourseArchiveTasksToStore(store: Store) {
       if (course.courseState.toLowerCase() === 'active') {
         remoteCourseCandidates.push(courseAlias)
       }
-
     }
   }
 
