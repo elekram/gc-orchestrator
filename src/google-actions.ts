@@ -18,26 +18,29 @@ export async function listCourseMembers(
 
   console.log(`%cFetching ${type} for course ${courseId} - ${index} of ${total} tasks`, 'color:lightblue')
 
-  const response = await fetch(
-    `${path}${id}/${type}`, {
-    method: 'GET',
-    headers: getHeaders(auth)
-  })
-
-  const data = await processResponse(response)
-
-  const members: string[] = []
-
-  if (data.responseJson[type]) {
-    data.responseJson[type].forEach((member: Record<string, unknown>) => {
-      const memberProfile = member.profile as Record<string, string>
-      members.push(memberProfile.emailAddress)
+  try {
+    const response = await fetch(
+      `${path}${id}/${type}`, {
+      method: 'GET',
+      headers: getHeaders(auth)
     })
-  }
+    const data = await processResponse(response)
+    const members: string[] = []
 
-  return {
-    courseId,
-    [type]: members
+    if (data.responseJson[type]) {
+      data.responseJson[type].forEach((member: Record<string, unknown>) => {
+        const memberProfile = member.profile as Record<string, string>
+        members.push(memberProfile.emailAddress)
+      })
+    }
+
+    return {
+      courseId,
+      [type]: members
+    }
+  } catch (e) {
+    console.log(e)
+    console.log(`Error with ${courseId}`)
   }
 }
 

@@ -22,9 +22,9 @@ export interface CourseTask {
   }
 }
 
-type TimetabledClass = {
-  classCode: string, students: string[]
-} | { classCode: string, teachers: string[] }
+type TimetabledCourse = {
+  courseCode: string, students: string[]
+} | { courseCode: string, teachers: string[] }
 
 // deno-lint-ignore require-await
 export async function addCompositeClassTasksToStore(store: Store) {
@@ -138,61 +138,61 @@ export async function addClassTasksToStore(store: Store) {
 
 export async function addStudentEnrolmentTasksToStore(store: Store) {
   const auth = store.auth
-  let timetabledClasses: TimetabledClass[] = []
+  let timetabledCourses: TimetabledCourse[] = []
 
-  const compositeClassEnrollments = getEnrolmentsForClass(
+  const compositeClassEnrollments = getEnrolments(
     store,
     'students',
+    'class',
     store.timetable.compositeClasses
   )
 
-  const classEnrollments = getEnrolmentsForClass(
+  const classEnrollments = getEnrolments(
     store,
     'students',
+    'class',
     store.timetable.classes
   )
 
   if (compositeClassEnrollments.length) {
-    timetabledClasses = timetabledClasses.concat(compositeClassEnrollments)
+    timetabledCourses = timetabledCourses.concat(compositeClassEnrollments)
   }
 
   if (classEnrollments.length) {
-    timetabledClasses = timetabledClasses.concat(classEnrollments)
+    timetabledCourses = timetabledCourses.concat(classEnrollments)
   }
 
   const remoteCourseEnrolments = await Promise.all(
-    timetabledClasses.map(async (ttClass, index) => {
+    timetabledCourses.map(async (course, index) => {
 
-      const academicYear = getAcademicYearForClasscode(ttClass.classCode)
-      const alias = `${academicYear}-${ttClass.classCode}`
+      const courseId = course.courseCode
 
       return await googleClassroom.listCourseMembers(
         auth,
         'students',
-        alias,
+        courseId,
         index,
-        timetabledClasses.length
+        timetabledCourses.length
       )
     })
   )
 
-  for (const tc of timetabledClasses) {
-    const academicYear = getAcademicYearForClasscode(tc.classCode)
-    const alias = `${academicYear}-${tc.classCode}`
+  for (const tc of timetabledCourses) {
+    const courseId = tc.courseCode
 
     if ('students' in tc) {
 
       const students = tc.students
       const hasRemoteCourse = remoteCourseEnrolments.filter(match => {
         if (match) {
-          return match.courseId === alias
+          return match.courseId === courseId
         }
       })
 
       if (hasRemoteCourse.length) {
         for (const remoteCourse of remoteCourseEnrolments) {
 
-          if (remoteCourse.courseId === alias) {
+          if (remoteCourse && remoteCourse.courseId === courseId) {
             const diffedStudents = diffArrays(
               students,
               remoteCourse.students as string[]
@@ -230,58 +230,69 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
 export async function addTeacherEnrolmentTasksToStore(store: Store) {
   const auth = store.auth
-  let timetabledClasses: TimetabledClass[] = []
+  let timetabledCourses: TimetabledCourse[] = []
 
-  const compositeEnrollments = getEnrolmentsForClass(
+  const compositeClassEnrollments = getEnrolments(
     store,
     'teachers',
+    'class',
     store.timetable.compositeClasses
   )
 
-  timetabledClasses = timetabledClasses.concat(compositeEnrollments)
+  timetabledCourses = timetabledCourses.concat(compositeClassEnrollments)
 
-  const enrollments = getEnrolmentsForClass(
+  const classEnrollments = getEnrolments(
     store,
     'teachers',
+    'class',
     store.timetable.classes
   )
 
-  if (enrollments.length) {
-    timetabledClasses = timetabledClasses.concat(enrollments)
+  if (classEnrollments.length) {
+    timetabledCourses = timetabledCourses.concat(classEnrollments)
+  }
+
+  const subjectEnrollments = getEnrolments(
+    store,
+    'teachers',
+    'subject',
+    store.timetable.subjects
+  )
+
+  if (subjectEnrollments.length) {
+    timetabledCourses = timetabledCourses.concat(subjectEnrollments)
   }
 
   const remoteCourseEnrolments = await Promise.all(
-    timetabledClasses.map(async (ttClass, index) => {
-      const academicYear = getAcademicYearForClasscode(ttClass.classCode)
-      const alias = `${academicYear}-${ttClass.classCode}`
+    timetabledCourses.map(async (course, index) => {
+      const courseId = course.courseCode
 
       return await googleClassroom.listCourseMembers(
         auth,
         'teachers',
-        alias,
+        courseId,
         index,
-        timetabledClasses.length
+        timetabledCourses.length
       )
     })
   )
 
-  for (const tc of timetabledClasses) {
-    const academicYear = getAcademicYearForClasscode(tc.classCode)
-    const alias = `${academicYear}-${tc.classCode}`
+  for (const tc of timetabledCourses) {
+    const courseId = tc.courseCode
 
     if ('teachers' in tc) {
 
       const teachers = tc.teachers
       const hasRemoteCourse = remoteCourseEnrolments.filter(match => {
         if (match) {
-          return match.courseId === alias
+          return match.courseId === courseId
         }
       })
 
       if (hasRemoteCourse.length) {
         for (const remoteCourse of remoteCourseEnrolments) {
 
-          if (remoteCourse.courseId === alias) {
+          if (remoteCourse && remoteCourse.courseId === courseId) {
             const diffedTeachers = diffArrays(
               teachers,
               remoteCourse.teachers as string[]
@@ -424,26 +435,33 @@ export async function addCourseDeletionTasksToStore(store: Store) {
   }
 }
 
-function getEnrolmentsForClass(
+function getEnrolments(
   store: Store,
-  type: 'students' | 'teachers',
-  classes: Map<string, Enrolments>
+  memberType: 'students' | 'teachers',
+  courseType: 'subject' | 'class',
+  courses: Map<string, Enrolments>
 ) {
-  const timetabledClasses = []
+  const timetabledCourses = []
+  let courseCode: string
 
-  for (const [classCode, c] of classes) {
-    const academicYear = getAcademicYearForClasscode(classCode)
-    const alias = `${academicYear}-${classCode}`
-    const members = Array.from(c[type])
+  for (const [code, c] of courses) {
+    if (courseType === 'subject') {
+      courseCode = `SUBJ-${code}`
+    } else {
+      const academicYear = getAcademicYearForClasscode(code)
+      courseCode = `${academicYear}-${code}`
+    }
 
-    if (store.remote.courseAliases.has(alias)) {
-      timetabledClasses.push({
-        classCode,
-        [type]: members
-      } as TimetabledClass)
+    const members = Array.from(c[memberType])
+
+    if (store.remote.courseAliases.has(courseCode)) {
+      timetabledCourses.push({
+        courseCode,
+        [memberType]: members
+      } as TimetabledCourse)
     }
   }
-  return timetabledClasses
+  return timetabledCourses
 }
 
 function getCurrentAcademicYearSet() {
@@ -471,8 +489,8 @@ function getAcademicYearForClasscode(classCode: string) {
     }
   }
 
-  if (decimalsArray.length === 2) {
-    const yearLevel = decimalsArray[1].slice(0, 2)
+  if (decimalsArray.length > 1) {
+    const yearLevel = decimalsArray[decimalsArray.length - 1].slice(0, 2)
     const year = appSettings.academicYearMap.get(yearLevel)
 
     if (typeof year === 'string') {

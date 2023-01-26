@@ -8,6 +8,7 @@ import testSubjects from './src/test-subjects.ts'
 import { addCourseAliasMapToStore, addCoursesToStore } from './src/courses.ts'
 import * as tasks from './src/tasks.ts'
 import * as googleClassroom from './src/google-actions.ts'
+import { TinyLogger } from 'https://deno.land/x/tiny_logger@v1.0.12/mod.ts'
 
 const args = processArgs(Deno.args)
 
@@ -48,7 +49,7 @@ await tasks.addStudentEnrolmentTasksToStore(store)
 await tasks.addCourseArchiveTasksToStore(store)
 await tasks.addCourseDeletionTasksToStore(store)
 
-if (args.has('--LOG-TASKS'.toLowerCase())) {
+if (args.has('--SHOW-TASKS'.toLowerCase())) {
   logTasks(store)
   Deno.exit()
 }

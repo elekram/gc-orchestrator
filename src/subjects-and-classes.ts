@@ -8,6 +8,7 @@ export interface Subject {
   domain: string
   leaders: Set<string>
   teachers: Set<string>
+  students: Set<string>
 }
 
 export interface Class {
@@ -202,6 +203,7 @@ export function addSubjectsAndClassesToStore(
       domain,
       leaders: new Set<string>(leaders),
       teachers: new Set<string>(teachers),
+      students: new Set<string>(),
     }
 
     const c: Class = {
