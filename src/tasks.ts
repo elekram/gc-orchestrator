@@ -181,46 +181,37 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
     const courseId = tc.courseCode
 
     if ('students' in tc) {
-
       const students = tc.students
-      const hasRemoteCourse = remoteCourseEnrolments.filter(match => {
-        if (match) {
-          return match.courseId === courseId
-        }
-      })
+      for (const remoteCourse of remoteCourseEnrolments) {
 
-      if (hasRemoteCourse.length) {
-        for (const remoteCourse of remoteCourseEnrolments) {
+        if (remoteCourse && remoteCourse.courseId === courseId) {
+          const diffedStudents = diffArrays(
+            students,
+            remoteCourse.students as string[]
+          )
 
-          if (remoteCourse && remoteCourse.courseId === courseId) {
-            const diffedStudents = diffArrays(
-              students,
-              remoteCourse.students as string[]
-            )
+          const studentsToAdd = diffedStudents.arr1Diff
+          for (const student of studentsToAdd) {
+            store.tasks.enrolmentTasks.push({
+              type: 'students',
+              action: 'POST',
+              courseId: remoteCourse.courseId as string,
+              user: {
+                userId: student
+              }
+            } as googleClassroom.CourseMemberProps)
+          }
 
-            const studentsToAdd = diffedStudents.arr1Diff
-            for (const student of studentsToAdd) {
-              store.tasks.enrolmentTasks.push({
-                type: 'students',
-                action: 'POST',
-                courseId: remoteCourse.courseId as string,
-                user: {
-                  userId: student
-                }
-              } as googleClassroom.CourseMemberProps)
-            }
-
-            const studentsToRemove = diffedStudents.arr2Diff
-            for (const student of studentsToRemove) {
-              store.tasks.enrolmentTasks.push({
-                type: 'students',
-                action: 'DELETE',
-                courseId: remoteCourse.courseId as string,
-                user: {
-                  userId: student
-                }
-              } as googleClassroom.CourseMemberProps)
-            }
+          const studentsToRemove = diffedStudents.arr2Diff
+          for (const student of studentsToRemove) {
+            store.tasks.enrolmentTasks.push({
+              type: 'students',
+              action: 'DELETE',
+              courseId: remoteCourse.courseId as string,
+              user: {
+                userId: student
+              }
+            } as googleClassroom.CourseMemberProps)
           }
         }
       }
@@ -281,55 +272,46 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
     const courseId = tc.courseCode
 
     if ('teachers' in tc) {
-
       const teachers = tc.teachers
-      const hasRemoteCourse = remoteCourseEnrolments.filter(match => {
-        if (match) {
-          return match.courseId === courseId
-        }
-      })
+      for (const remoteCourse of remoteCourseEnrolments) {
 
-      if (hasRemoteCourse.length) {
-        for (const remoteCourse of remoteCourseEnrolments) {
+        if (remoteCourse && remoteCourse.courseId === courseId) {
+          const diffedTeachers = diffArrays(
+            teachers,
+            remoteCourse.teachers as string[]
+          )
 
-          if (remoteCourse && remoteCourse.courseId === courseId) {
-            const diffedTeachers = diffArrays(
-              teachers,
-              remoteCourse.teachers as string[]
-            )
+          const teachersToAdd = diffedTeachers.arr1Diff
+          for (const teacher of teachersToAdd) {
+            store.tasks.enrolmentTasks.push({
+              type: 'teachers',
+              action: 'POST',
+              courseId: remoteCourse.courseId as string,
+              user: {
+                userId: teacher
+              }
+            } as googleClassroom.CourseMemberProps)
+          }
 
-            const teachersToAdd = diffedTeachers.arr1Diff
-            for (const teacher of teachersToAdd) {
-              store.tasks.enrolmentTasks.push({
-                type: 'teachers',
-                action: 'POST',
-                courseId: remoteCourse.courseId as string,
-                user: {
-                  userId: teacher
-                }
-              } as googleClassroom.CourseMemberProps)
+          const teachersToRemove = diffedTeachers.arr2Diff
+          for (const teacher of teachersToRemove) {
+
+            if (teacher.toLowerCase() === appSettings.classadmin) {
+              continue
             }
 
-            const teachersToRemove = diffedTeachers.arr2Diff
-            for (const teacher of teachersToRemove) {
-
-              if (teacher.toLowerCase() === appSettings.classadmin) {
-                continue
-              }
-
-              if (appSettings.teacherAides.includes(teacher.toLowerCase())) {
-                continue
-              }
-
-              store.tasks.enrolmentTasks.push({
-                type: 'teachers',
-                action: 'DELETE',
-                courseId: remoteCourse.courseId as string,
-                user: {
-                  userId: teacher
-                }
-              } as googleClassroom.CourseMemberProps)
+            if (appSettings.teacherAides.includes(teacher.toLowerCase())) {
+              continue
             }
+
+            store.tasks.enrolmentTasks.push({
+              type: 'teachers',
+              action: 'DELETE',
+              courseId: remoteCourse.courseId as string,
+              user: {
+                userId: teacher
+              }
+            } as googleClassroom.CourseMemberProps)
           }
         }
       }
