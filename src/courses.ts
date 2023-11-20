@@ -7,7 +7,7 @@ export async function addCoursesToStore(store: Store) {
   const courses = await googleClassroom.listCourses(
     auth,
     'teacherId',
-    appSettings.classadmin
+    appSettings.classadmin,
   )
 
   for (const course of courses) {
@@ -31,18 +31,17 @@ export async function addCourseAliasMapToStore(store: Store) {
         auth,
         course,
         index,
-        googleCoursesIds.length
+        googleCoursesIds.length,
       )
-    })
+    }),
   )
 
   courseAliases.forEach((alias) => {
     const googleCourseId = alias.id
-    alias.aliases.forEach(e => {
+    alias.aliases.forEach((e) => {
       const courseAlias = e
       store.remote.courseAliases.set(courseAlias, googleCourseId)
+      store.remote.courseIds.set(googleCourseId, courseAlias)
     })
   })
 }
-
-

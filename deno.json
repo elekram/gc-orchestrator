@@ -1,0 +1,19 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.205.0/"
+  },
+  "tasks": {
+    "run": "deno run -A --check main.ts --run-tasks",
+    "log-course-tasks": "deno run -A main.ts --log-course-tasks",
+    "log-enrolment-tasks": "deno run -A main.ts --log-enrolment-tasks",
+    "aliases": "deno run -A --check main.ts --view-aliases",
+    "subject": "deno run -A --check main.ts --view-subject",
+    "composites": "deno run -A --check main.ts --view-composites"
+  },
+  "fmt": {
+    "options": {
+      "semiColons": false,
+      "singleQuote": true
+    }
+  }
+}
