@@ -9,3 +9,5 @@ config/
 
 #csv files for timetable
 csv/
+
+sync.ps1

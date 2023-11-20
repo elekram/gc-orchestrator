@@ -1,14 +1,17 @@
 import { diffArrays } from './diff-arrays.ts'
 
 export function processArgs(rawArgs: string[]) {
-  const args = rawArgs.map(arguement => {
+  const args = rawArgs.map((arguement) => {
     return arguement.trim().toLowerCase()
   })
 
   const acceptedFlags = [
     '--run-tasks',
-    '--show-tasks',
-    '--show-aliases'
+    '--log-course-tasks',
+    '--log-enrolment-tasks',
+    '--view-aliases',
+    '--view-subject',
+    '--view-composites',
   ]
 
   if (!args.length) {
@@ -25,7 +28,7 @@ export function processArgs(rawArgs: string[]) {
   }
 
   if (args.length > 1) {
-    const exception = 'Error: Multiple flags set'
+    const exception = 'Error: Multiple flags set.'
     displayHelp(exception)
     Deno.exit(1)
   }
@@ -36,11 +39,28 @@ export function processArgs(rawArgs: string[]) {
     console.log('\n%cNAME', 'color:yellow')
     console.log('  Google Classroom Sync\n')
     console.log('%cDESCRIPTION', 'color:yellow')
-    console.log('  Synchronise Google Classrom courses and course members to school Timetabler CSV files.\n')
+    console.log(
+      '  Synchronise Google Classrom courses and course members to school Timetabler CSV files.\n',
+    )
     console.log('%cFLAG EXAMPLES', 'color:yellow')
-    console.log('  --Run-Tasks        : Run tasks generated from timetable CSVs.\n')
-    console.log('  --Show-Tasks       : Log generated task objects to screen instead of executing them.\n')
-    console.log('  --Show-Aliases     : Log course ID to alias map to screen.\n')
+    console.log(
+      '  --Run-Tasks           : Run tasks generated from timetable CSVs.\n',
+    )
+    console.log(
+      '  --Log-Course-Tasks   : Log generated course tasks to screen and file screen instead of executing them.\n',
+    )
+    console.log(
+      '  --Log-Enrolment-Tasks: Log generated enrolment tasks to screen and file instead of executing them.\n',
+    )
+    console.log(
+      '  --View-Aliases        : View course ID to alias map to screen.\n',
+    )
+    console.log(
+      '  --View-Subject        : View user defined subject.\n',
+    )
+    console.log(
+      '  --View-Composites     : View composite classes.\n',
+    )
     console.log('\n%c' + exceptionMsg + '\n', 'color:red')
   }
 }
