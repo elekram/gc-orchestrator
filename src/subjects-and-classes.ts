@@ -1,4 +1,5 @@
-import { csv } from './deps.ts'
+// import { csv } from './deps.ts'
+import { parse } from 'std/csv/mod.ts'
 import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
 import { tinyLogger } from './deps.ts'
@@ -41,29 +42,34 @@ const unscheduledDutiesCsvFile = appSettings.unscheduledDutiesCsvFileName
 const subjectExceptions = appSettings.subjectExceptions
 const classExceptions = appSettings.compositeClassExceptions
 
-const classNames = csv.parse(
+const classNames = parse(
   await Deno.readTextFile(`${csvFileLocation}${classNamesCsvFile}`),
-  { skipFirstRow: true }
+  { skipFirstRow: true },
 )
 
-const timetable = csv.parse(
+const timetable = parse(
   await Deno.readTextFile(`${csvFileLocation}${timetableCsvFile}`),
-  { skipFirstRow: true }
+  { skipFirstRow: true },
 )
 
-const studentLessons = csv.parse(
+const studentLessons = parse(
   await Deno.readTextFile(`${csvFileLocation}${studentLessonsCsvFile}`),
-  { skipFirstRow: true }
+  { skipFirstRow: true },
 )
 
-const unscheduledDuties = csv.parse(
+const unscheduledDuties = parse(
   await Deno.readTextFile(`${csvFileLocation}${unscheduledDutiesCsvFile}`),
-  { skipFirstRow: true }
+  { skipFirstRow: true },
 )
 
 export function addTimetableToStore(store: Store) {
   const compositeClassCodes = getCompositeClassCodes(classExceptions)
-  const subjects = addSubjectsAndClassesToStore(store, compositeClassCodes, subjectExceptions)
+
+  const subjects = addSubjectsAndClassesToStore(
+    store,
+    compositeClassCodes,
+    subjectExceptions,
+  )
   const compositeClasses = addCompositeClassesToStore(store, classExceptions)
 
   return { subjects, compositeClasses }
@@ -71,19 +77,30 @@ export function addTimetableToStore(store: Store) {
 
 function addCompositeClassesToStore(store: Store, classExceptions: string[]) {
   const uniqueLessons = getUniqueLessons(classExceptions)
-  const compositeClasses = filterCompositeClasses(uniqueLessons, classExceptions)
+  const compositeClasses = filterCompositeClasses(
+    uniqueLessons,
+    classExceptions,
+  )
 
   const assesmbledCompositeClasses: Map<string, Enrolments> = new Map()
 
   for (const [_key, c] of compositeClasses) {
     let compositeClassName = ''
     const sortedClasses: string[] = Array.from(c).sort()
-    let teachers = new Set<string>()
-    let students = new Set<string>()
+    const teachers = new Set<string>()
+    const students = new Set<string>()
 
-    sortedClasses.forEach(c => {
-      teachers = getTeachers(c)
-      students = getStudents(c)
+    sortedClasses.forEach((c) => {
+      const timetabledTeachers = getTeachers(c)
+      const timetabledStudents = getStudents(c)
+
+      timetabledTeachers.forEach((t) => {
+        teachers.add(t)
+      })
+
+      timetabledStudents.forEach((s) => {
+        students.add(s)
+      })
 
       compositeClassName += `${c.substring(1)}-`
     })
@@ -91,7 +108,7 @@ function addCompositeClassesToStore(store: Store, classExceptions: string[]) {
 
     const classMembers = {
       teachers,
-      students
+      students,
     }
 
     assesmbledCompositeClasses.set(compositeClassName, classMembers)
@@ -102,7 +119,10 @@ function addCompositeClassesToStore(store: Store, classExceptions: string[]) {
 
 function getCompositeClassCodes(classExceptions: string[]): Set<string> {
   const uniqueLessons = getUniqueLessons(classExceptions)
-  const compositeClasses = filterCompositeClasses(uniqueLessons, classExceptions)
+  const compositeClasses = filterCompositeClasses(
+    uniqueLessons,
+    classExceptions,
+  )
 
   const compositeClassCodes: Set<string> = new Set()
 
@@ -123,17 +143,19 @@ function getUniqueLessons(classExceptions: string[]): Map<string, Lesson> {
       continue
     }
 
+    if (classExceptions.includes(classCode)) {
+      continue
+    }
+
     const teacher = row['Teacher Code'] as string
     const period = row['Period No'] as string
     const day = row['Day No'] as string
 
-    const exceptedClass: boolean = classExceptions.includes(classCode)
-
-    if (!exceptedClass && !lessons.has(classCode)) {
+    if (!lessons.has(classCode)) {
       const lesson: Lesson = {
         period,
         teacher,
-        day
+        day,
       }
       lessons.set(classCode, lesson)
     }
@@ -141,28 +163,30 @@ function getUniqueLessons(classExceptions: string[]): Map<string, Lesson> {
   return lessons
 }
 
-function filterCompositeClasses(uniqueLessons: Map<string, Lesson>,
-  classExceptions: string[]): Map<string, Set<string>> {
+function filterCompositeClasses(
+  uniqueLessons: Map<string, Lesson>,
+  classExceptions: string[],
+): Map<string, Set<string>> {
   const compositeClasses: Map<string, Set<string>> = new Map()
-
   for (const [classCode, lesson] of uniqueLessons) {
+    const classes: Set<string> = new Set()
     for (const row of timetable) {
-      const exceptedClass: boolean = classExceptions.includes(row['Class Code'] as string)
-
-      if (!exceptedClass) {
-        if (
-          classCode !== row['Class Code'] &&
-          lesson.day === row['Day No'] &&
-          lesson.period === row['Period No'] &&
-          lesson.teacher === row['Teacher Code']
-        ) {
-          const classes: Set<string> = new Set()
-
-          classes.add(classCode)
-          classes.add(String(row['Class Code']))
-          compositeClasses.set(classCode, classes)
-        }
+      if (classExceptions.includes(classCode)) {
+        continue
       }
+
+      if (
+        classCode !== row['Class Code'] &&
+        lesson.day === row['Day No'] &&
+        lesson.period === row['Period No'] &&
+        lesson.teacher === row['Teacher Code']
+      ) {
+        classes.add(classCode)
+        classes.add(String(row['Class Code']))
+      }
+    }
+    if (classes.size > 1) {
+      compositeClasses.set(classCode, classes)
     }
   }
   return compositeClasses
@@ -171,7 +195,7 @@ function filterCompositeClasses(uniqueLessons: Map<string, Lesson>,
 export function addSubjectsAndClassesToStore(
   store: Store,
   compositeClassCodes: Set<string>,
-  subjectExceptions: string[]
+  subjectExceptions: string[],
 ): void {
   const subjects: Map<string, Subject> = new Map()
   const classes: Map<string, Class> = new Map()
@@ -196,7 +220,7 @@ export function addSubjectsAndClassesToStore(
     const teachers = getTeachers(subjectCodeWithSemeterPrefix)
     const students = getStudents(classCodeWithSemeterPrefix)
 
-    leaders?.forEach(leader => teachers.add(leader))
+    leaders?.forEach((leader) => teachers.add(leader))
 
     const s: Subject = {
       name,
@@ -233,10 +257,13 @@ function getLeaders(domain: string): Set<string> | undefined {
   const domains: Map<string, Set<string>> = new Map()
 
   for (const row of unscheduledDuties) {
-    const hasDomainLeaderRow: boolean = (row['Duty Name'] as string).includes('Google Domain Leader')
+    const hasDomainLeaderRow: boolean = (row['Duty Name'] as string).includes(
+      'Google Domain Leader',
+    )
 
     if (hasDomainLeaderRow) {
-      const domainName = (row['Duty Name'] as string).split('_')[1].toUpperCase()
+      const domainName = (row['Duty Name'] as string).split('_')[1]
+        .toUpperCase()
       const domainLeader = (row['Teacher Code'] as string).toLowerCase()
       const username = domainLeader + gooogleDomain
 
@@ -244,7 +271,6 @@ function getLeaders(domain: string): Set<string> | undefined {
         domains.set(domainName, new Set())
       }
       domains.get(domainName)?.add(username)
-
     }
   }
   return domains.get(domain)
@@ -301,7 +327,7 @@ function isValidCode(code: string): boolean {
   const qualifier = code.charAt(4)
 
   if (isNumber.test(qualifier)) {
-    // code with 3 letter subject 
+    // code with 3 letter subject
     if (!/^[A-Z]+$/.test(code.substring(1, 4))) {
       isValid = false
     }
@@ -315,9 +341,8 @@ function isValidCode(code: string): boolean {
         isValid = false
       }
     }
-
   } else if (isLetter.test(qualifier)) {
-    // code with 4 letter subject 
+    // code with 4 letter subject
     if (!/^[A-Z]+$/.test(code.substring(1, 5))) {
       isValid = false
     }
@@ -340,7 +365,7 @@ function isValidCode(code: string): boolean {
 
     tinyLogger.log(type, message, {
       logLevel,
-      fileName: './log/log.csv'
+      fileName: './log/log.csv',
     })
   }
   return isValid
