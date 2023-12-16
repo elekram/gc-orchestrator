@@ -8,7 +8,6 @@ export default function testSubjects(store: Store) {
   let isWarning = false
 
   for (const [key, s] of store.timetable.subjects) {
-
     if (!s.domain) {
       isWarning = true
       const logLevel = 'warn'
@@ -17,11 +16,11 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
 
-    if (!s.leaders.size) {
+    if (!s.subjectLeaders.size) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
@@ -29,11 +28,11 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
 
-    if (!s.teachers.size) {
+    if (!s.subjectTeachers.size) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
@@ -41,7 +40,7 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
 
@@ -59,11 +58,11 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
 
-    if (!c.teachers.size) {
+    if (!c.subjectTeachers.size) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
@@ -71,11 +70,11 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
 
-    if (!c.leaders.size) {
+    if (!c.subjectLeaders.size) {
       isWarning = true
       const logLevel = 'warn'
       const type = 'ƒ-testSubject'
@@ -83,7 +82,7 @@ export default function testSubjects(store: Store) {
 
       tinyLogger.log(type, message, {
         logLevel,
-        fileName: './log/log.csv'
+        fileName: './log/log.csv',
       })
     }
   }
