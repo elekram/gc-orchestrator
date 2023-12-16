@@ -167,11 +167,13 @@ function getCompositeClasses(classExceptions: string[]) {
       compositeClassCodes.add(classCode)
       compositeClassName += `${classCode}-`
 
+      const leaders = getLeaders(domain)
       const teachersFromSubjectCode = getSubjectTeachers(subjectCode)
       const teachersFromClassCode = getClassTeachers(classCode)
       const studentsFromClassCode = getStudents(classCode)
 
-      subjectNames
+      leaders?.forEach((leader) => subjectTeachers.add(leader))
+
       teachersFromSubjectCode.forEach(subjectTeachers.add, subjectTeachers)
       teachersFromClassCode.forEach(classTeachers.add, classTeachers)
       studentsFromClassCode.forEach(students.add, students)
