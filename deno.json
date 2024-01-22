@@ -7,13 +7,18 @@
     "log-course-tasks": "deno run -A main.ts --log-course-tasks",
     "log-enrolment-tasks": "deno run -A main.ts --log-enrolment-tasks",
     "aliases": "deno run -A --check main.ts --view-aliases",
-    "subject": "deno run -A --check main.ts --view-subject",
-    "composites": "deno run -A --check main.ts --view-composites"
+    "view-subject": "deno run -A --check main.ts --view-subject",
+    "view-composites": "deno run -A --check main.ts --view-composites",
+    "replace-teacher": "deno run -A --check main.ts --replace-teacher",
+    "delete-course": "deno run -A --check main.ts --delete-course",
+    "transfer-ownership": "deno run -A --check main.ts --transfer-course-ownership",
+    "list-courses": "deno run -A --check main.ts --list-courses",
+    "dailyorg": "deno run -A --check main.ts --dailyorg-replacements"
   },
   "fmt": {
-    "options": {
-      "semiColons": false,
-      "singleQuote": true
-    }
+    "semiColons": false,
+    "singleQuote": true,
+    "include": ["**"],
+    "lineWidth": 90
   }
 }
