@@ -24,10 +24,12 @@ export interface Class {
   students: Set<string>
   periodSchedule: Map<number, Set<number>>
   isComposite: boolean
+  isExceptedSubject: boolean
 }
 
 export interface CompositeClass {
   classCodes: Set<string>
+  classCodesWithSemeterPrefix: Set<string>
   subjectNames: Set<string>
   subjectLeaders: Set<string>
   subjectTeachers: Set<string>
@@ -80,6 +82,7 @@ export function addTimetableToStore(store: Store) {
 
   store.timetable.subjects = timetable.subjects
   store.timetable.classes = timetable.classes
+  // console.log(store.timetable.classes)
   store.timetable.compositeClasses = getCompositeClasses(classExceptions)
     .classes()
 
@@ -94,7 +97,7 @@ export function addTimetableToStore(store: Store) {
   )
 
   console.log(
-    `\n%c[ ${store.timetable.compositeClasses.size} Composite Classes added to Store from Timetable ]`,
+    `\n%c[ ${store.timetable.compositeClasses.size} Composite Classes added to Store from Timetable ]\n`,
     'color:green',
   )
 }
@@ -104,9 +107,7 @@ function getCompositeClasses(classExceptions: string[]) {
   const compositeClassCodes: Set<string> = new Set()
 
   for (const row of timetable) {
-    const schedule = `D${row['Day No']}P${row['Period No']}${
-      row['Teacher Code']
-    }`
+    const schedule = `D${row['Day No']}P${row['Period No']}${row['Teacher Code']}`
 
     if (!row['Class Code']) continue
     if (classExceptions.includes(row['Class Code'])) continue
@@ -132,6 +133,8 @@ function getCompositeClasses(classExceptions: string[]) {
     let compositeClassName = ''
     let subjectCode = ''
     let domain = ''
+    const classCodes: Set<string> = new Set()
+    const classCodesWithSemeterPrefix: Set<string> = new Set()
     const subjectNames: Set<string> = new Set()
     const subjectTeachers: Set<string> = new Set()
     const classTeachers: Set<string> = new Set()
@@ -164,8 +167,13 @@ function getCompositeClasses(classExceptions: string[]) {
         continue
       }
 
-      compositeClassCodes.add(classCode)
-      compositeClassName += `${classCode}-`
+      if (!classExceptions.includes(classCode)) {
+        compositeClassCodes.add(classCode.substring(1))
+      }
+
+      classCodes.add(classCode.substring(1))
+      classCodesWithSemeterPrefix.add(classCode)
+      compositeClassName += `${classCode.substring(1)}-`
 
       const leaders = getLeaders(domain)
       const teachersFromSubjectCode = getSubjectTeachers(subjectCode)
@@ -183,7 +191,8 @@ function getCompositeClasses(classExceptions: string[]) {
 
     compositeClasses.set(trimmedCompositeClassName, {
       subjectNames,
-      classCodes: new Set(sortedClassCodes),
+      classCodes,
+      classCodesWithSemeterPrefix,
       subjectLeaders: new Set(getLeaders(domain)),
       subjectTeachers: new Set(subjectTeachers),
       classTeachers: new Set(classTeachers),
@@ -239,7 +248,7 @@ export function getSubjectsAndClasses(
     }
 
     let isComposite = false
-    if (compositeClassCodes.has(classCodeWithSemeterPrefix)) {
+    if (compositeClassCodes.has(classCode)) {
       isComposite = true
     }
 
@@ -263,6 +272,7 @@ export function getSubjectsAndClasses(
       students: new Set<string>(students),
       periodSchedule,
       isComposite,
+      isExceptedSubject,
     }
 
     if (!subjectExceptions.includes(subjectCode)) {
