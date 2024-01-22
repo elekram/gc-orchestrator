@@ -9,6 +9,8 @@ import { addUsersToStore } from './src/users.ts'
 import * as tasks from './src/tasks.ts'
 import * as googleClassroom from './src/google-actions.ts'
 import { logTasks } from './src/log-tasks.ts'
+import { replaceTeacher } from './src/replace-teacher.ts'
+import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 
 const args = processArgs(Deno.args)
 
@@ -21,10 +23,90 @@ store.auth = await getToken(googleServiceAccountJson, {
   delegationSubject: appSettings.jwtSubject,
 })
 
+if (args.has('--VIEW-ALIASES'.toLowerCase())) {
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
+  await logTasks(store, 'aliases')
+  Deno.exit()
+}
+
+if (args.has('--DELETE-COURSE'.toLowerCase())) {
+  console.log("\n\n\nPlease enter the course alias - example '2023-ENG07A'")
+  const input = prompt('\nAlias:')
+
+  if (typeof input === 'string') {
+    const alias = input
+    await deleteCourse(store, alias)
+  }
+  Deno.exit()
+}
+
+if (args.has('--LIST-COURSES'.toLowerCase())) {
+  console.log('\n\n\n%cPlease enter a User Id', 'color:cyan')
+  const userId = prompt('\nUser Id:')
+
+  if (typeof userId === 'string') {
+    const courses = await googleClassroom.listCourses(
+      store.auth,
+      'teacherId',
+      userId,
+    )
+
+    if (!courses) {
+      console.log(`\n%cNo courses found for ${userId}`, 'color:red')
+      Deno.exit()
+    }
+
+    const rows: Record<string, string>[] = []
+
+    for (const course of courses) {
+      rows.push({
+        Id: course.id as string,
+        Name: course.name as string,
+        CreationTime: course.creationTime as string,
+        CourseState: course.courseState as string,
+      })
+    }
+
+    const sortedRows = rows.sort((
+      a,
+      b,
+    ) => (a.CourseState < b.CourseState ? -1 : 1))
+
+    console.table(sortedRows)
+  }
+  Deno.exit()
+}
+
+if (args.has('--TRANSFER-COURSE-OWNERSHIP'.toLowerCase())) {
+  await transferCourseOwenership()
+}
+
 addTimetableToStore(store)
+addDailyOrgReplacementsToStore(store)
+
+if (appSettings.validateSubjectsAndClasses) {
+  testSubjects(store)
+  console.log(
+    `\n%c[ CSV File Location: ${appSettings.csvFileLocation.substring(1)} ]\n`,
+    'color:cyan',
+  )
+
+  console.log(
+    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
+    'color:cyan',
+  )
+
+  const input = prompt('\nWould you like to continue? (y/n)')
+
+  if (input === null || input.toLowerCase() !== 'y') {
+    console.log('\n%c[ Script Exiting ]\n', 'color:magenta')
+    Deno.exit()
+  }
+}
 
 if (args.has('--VIEW-SUBJECT'.toLowerCase())) {
-  console.log('\n\n\nPlease enter a subject code - example \'ENG07\'')
+  console.log("\n\n\nPlease enter a subject code - example 'ENG07'")
   const input = prompt('\nSubject:')
 
   if (typeof input === 'string') {
@@ -43,59 +125,131 @@ if (args.has('--VIEW-COMPOSITES'.toLowerCase())) {
   Deno.exit()
 }
 
-if (appSettings.validateSubjectsAndClasses) {
-  testSubjects(store)
-  const input = prompt('\nWould you like to continue? (y/n)')
+if (args.has('--REPLACE-TEACHER'.toLowerCase())) {
+  await addUsersToStore(store)
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
 
-  if (input === null || input.toLowerCase() !== 'y') {
-    console.log('\n%c[ Script Exiting ]\n', 'color:magenta')
-    Deno.exit()
-  }
-}
-
-await addUsersToStore(store)
-await addCoursesToStore(store)
-await addCourseAliasMapToStore(store)
-
-if (args.has('--VIEW-ALIASES'.toLowerCase())) {
-  await logTasks(store, 'aliases')
+  replaceTeacher(store, 'sam@cheltsec.vic.edu.au', 'whe@cheltsec.vic.edu.au')
+  console.log(store.replacements.individualReplacements)
+  Deno.exit()
+  await tasks.addReplacementEnrolmentTasksToStore(store)
+  console.log(store.tasks.enrolmentTasks)
   Deno.exit()
 }
 
-if (appSettings.runCourseTasks) {
-  await tasks.addSubjectTasksToStore(store)
-  await tasks.addClassTasksToStore(store)
-  await tasks.addCompositeClassTasksToStore(store)
-}
-
-if (appSettings.runEnrolmentTasks) {
-  await tasks.addTeacherEnrolmentTasksToStore(store)
-  await tasks.addStudentEnrolmentTasksToStore(store)
-}
-
-if (appSettings.runArchiveTasks) {
-  await tasks.addCourseArchiveTasksToStore(store)
-}
-
-if (appSettings.runCourseDeletionTasks) {
-  await tasks.addCourseDeletionTasksToStore(store)
-}
-
 if (args.has('--LOG-ENROLMENT-TASKS'.toLowerCase())) {
+  await addUsersToStore(store)
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
+  await addTasksToStore(store)
+
   await logTasks(store, 'enrolment')
   Deno.exit()
 }
 
 if (args.has('--LOG-COURSE-TASKS'.toLowerCase())) {
+  await addUsersToStore(store)
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
+  await addTasksToStore(store)
+
   await logTasks(store, 'course')
   Deno.exit()
 }
 
 if (args.has('--RUN-TASKS'.toLowerCase())) {
+  await addUsersToStore(store)
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
+  await addTasksToStore(store)
   await runCourseTasks(store)
   await runUpdateAndArchiveTasks(store)
   await runEnrolmentTasks(store)
   await runCourseDeletionTasks(store)
+}
+
+async function transferCourseOwenership() {
+  console.log('\n\n\n%cPlease enter a course Id or Alias', 'color:cyan')
+  const userInput_CourseAliasOrId = prompt('\nCourse alias or Id:')
+  console.log(
+    `\n\n\n%cPlease enter the UserId to replace ownership for ${userInput_CourseAliasOrId}`,
+    'color:cyan',
+  )
+  const userInput_newCourseOwnerId = prompt('\nUserID:')
+
+  if (typeof userInput_CourseAliasOrId !== 'string') {
+    throw 'Course Alias or ID is invalid'
+  }
+
+  if (typeof userInput_newCourseOwnerId !== 'string') {
+    throw 'Course Alias or ID is invalid'
+  }
+
+  await addUsersToStore(store)
+
+  if (!store.remote.activeUsers.has(userInput_newCourseOwnerId.toLowerCase())) {
+    throw `User ${userInput_newCourseOwnerId.toLowerCase()} does not exist or is inactive.`
+  }
+
+  const currentCourseMembers = await googleClassroom.listCourseMembers(
+    store.auth,
+    'teachers',
+    userInput_CourseAliasOrId,
+    0,
+    1,
+  )
+
+  if (currentCourseMembers && currentCourseMembers.teachers) {
+    if (
+      !currentCourseMembers.teachers.includes(
+        userInput_newCourseOwnerId.toLowerCase(),
+      )
+    ) {
+      const props: googleClassroom.CourseMemberProps = {
+        courseId: userInput_CourseAliasOrId,
+        type: 'teachers',
+        action: 'POST',
+        user: {
+          userId: userInput_newCourseOwnerId.toLowerCase(),
+        },
+      }
+      await googleClassroom.editCourseMembers(store.auth, props, 0, 1)
+    }
+  }
+
+  await googleClassroom.changeCourseOwner(
+    store.auth,
+    userInput_CourseAliasOrId,
+    userInput_newCourseOwnerId,
+  )
+
+  Deno.exit()
+}
+
+async function addTasksToStore(store: Store) {
+  if (appSettings.runCourseTasks) {
+    await tasks.addSubjectTasksToStore(store)
+    await tasks.addClassTasksToStore(store)
+    await tasks.addCompositeClassTasksToStore(store)
+  }
+
+  if (appSettings.runEnrolmentTasks) {
+    await tasks.addTeacherEnrolmentTasksToStore(store)
+    await tasks.addStudentEnrolmentTasksToStore(store)
+  }
+
+  if (appSettings.runDailyorgTasks) {
+    await tasks.addDailyorgEnrolmentTasksToStore(store)
+  }
+
+  if (appSettings.runArchiveTasks) {
+    await tasks.addCourseArchiveTasksToStore(store)
+  }
+
+  if (appSettings.runCourseDeletionTasks) {
+    await tasks.addCourseDeletionTasksToStore(store)
+  }
 }
 
 async function runCourseTasks(store: Store) {
@@ -207,4 +361,13 @@ function viewSubejct(subject: string) {
       console.log(c)
     }
   }
+}
+
+async function deleteCourse(store: Store, alias: string) {
+  const auth = store.auth
+  const courseId = alias
+  const index = 0
+  const total = 1
+
+  await googleClassroom.deleteCourse(auth, courseId, index, total)
 }
