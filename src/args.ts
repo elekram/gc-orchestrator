@@ -12,6 +12,10 @@ export function processArgs(rawArgs: string[]) {
     '--view-aliases',
     '--view-subject',
     '--view-composites',
+    '--replace-teacher',
+    '--delete-course',
+    '--transfer-course-ownership',
+    '--list-courses',
   ]
 
   if (!args.length) {
@@ -60,6 +64,9 @@ export function processArgs(rawArgs: string[]) {
     )
     console.log(
       '  --View-Composites     : View composite classes.\n',
+    )
+    console.log(
+      '  --Delete-Corse        : Delete Course.\n',
     )
     console.log('\n%c' + exceptionMsg + '\n', 'color:red')
   }
