@@ -10,8 +10,12 @@ export async function listCourseMembers(
 ) {
   index = index + 1
 
-  const path = 'https://classroom.googleapis.com/v1/courses/'
-  const id = encodeURIComponent(`d:${courseId}`)
+  let id = `${encodeURIComponent(courseId)}`
+  if (isNaN(Number(courseId))) {
+    id = `d:${encodeURIComponent(courseId)}`
+  }
+
+  const path = 'https://classroom.googleapis.com/v1/courses'
 
   const delay = index * appSettings.taskDelay
   await sleep(delay)
@@ -23,7 +27,7 @@ export async function listCourseMembers(
 
   try {
     const response = await fetch(
-      `${path}${id}/${type}`,
+      `${path}/${id}/${type}`,
       {
         method: 'GET',
         headers: getHeaders(auth),
@@ -31,6 +35,13 @@ export async function listCourseMembers(
     )
     const data = await processResponse(response)
     const members: string[] = []
+
+    if (!data.responseJson[type]) {
+      return {
+        courseId,
+        [type]: [],
+      }
+    }
 
     if (data.responseJson[type]) {
       data.responseJson[type].forEach((member: Record<string, unknown>) => {
@@ -54,8 +65,12 @@ export async function listCourses(
   type: 'teacherId' | 'studentId',
   userId: string,
 ) {
+  if (!userId) {
+    throw 'No User Id'
+  }
+
   const path = 'https://classroom.googleapis.com/v1/courses/'
-  const id = `${type}=${encodeURIComponent(userId)}`
+  const id = `${type}=${encodeURIComponent(userId.toLowerCase())}`
   const pageSize = `pageSize=${appSettings.defaultPageSize}`
 
   const courses: Record<string, unknown>[] = []
@@ -64,7 +79,7 @@ export async function listCourses(
   let courseCount = 0
 
   console.log(
-    `%c[ Fetching remote Google Classroom courses for ${appSettings.classadmin} ]\n`,
+    `%c[ Fetching remote Google Classroom courses for ${userId.toLowerCase()} ]\n`,
     'color:green',
   )
 
@@ -151,10 +166,14 @@ export async function editCourseMembers(
   index = index + 1
   const type = props.type
   const method = props.action
-  const courseId = `${encodeURIComponent(`d:${props.courseId}`)}`
   const member = props.user.userId
   const encodedMember = `${encodeURIComponent(`${props.user.userId}`)}`
   const verb = props.action === 'POST' ? 'to' : 'from'
+
+  let id = `${encodeURIComponent(props.courseId)}`
+  if (isNaN(Number(props.courseId))) {
+    id = `d:${encodeURIComponent(props.courseId)}`
+  }
 
   let body = ''
 
@@ -163,12 +182,12 @@ export async function editCourseMembers(
 
   switch (props.action) {
     case 'POST':
-      requestUrl = `${baseUrl}/${courseId}/${type}`
+      requestUrl = `${baseUrl}/${id}/${type}`
       body = JSON.stringify(props.user)
       break
 
     case 'DELETE':
-      requestUrl = `${baseUrl}/${courseId}/${type}/${encodedMember}`
+      requestUrl = `${baseUrl}/${id}/${type}/${encodedMember}`
       break
   }
 
@@ -197,8 +216,7 @@ export async function editCourseMembers(
       'color:green',
     )
   } catch (e) {
-    const errorSource =
-      `Error: editCourseMembers() ${props.courseId} - ${member}`
+    const errorSource = `Error: editCourseMembers() ${props.courseId} - ${member}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
   }
 }
@@ -333,7 +351,11 @@ export async function changeCourseOwner(
   courseId: string,
   newOwner: string,
 ) {
-  const id = encodeURIComponent(courseId)
+  let id = `${encodeURIComponent(courseId)}`
+  if (isNaN(Number(courseId))) {
+    id = `d:${encodeURIComponent(courseId)}`
+  }
+
   const updateMask = 'updateMask=ownerId'
   const path = 'https://classroom.googleapis.com/v1/courses'
 
@@ -344,7 +366,7 @@ export async function changeCourseOwner(
   console.log(`\nPatching course ${courseId}`)
 
   const response = await fetch(
-    `${path}/d:${id}/?${updateMask}`,
+    `${path}/${id}/?${updateMask}`,
     {
       method: 'PATCH',
       headers: getHeaders(auth),
@@ -354,7 +376,7 @@ export async function changeCourseOwner(
 
   const data = await processResponse(response)
   console.log(
-    `%c[ Changed owner for ${courseId} to ${courseId} - ${data.status} ]\n`,
+    `%c[ Changed owner for ${courseId} to ${newOwner} - ${data.status} ]\n`,
     'color:green',
   )
 }
