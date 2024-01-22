@@ -28,7 +28,7 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
   const textEncoder = new TextEncoder()
 
   const header = base64Url.encode(
-    JSON.stringify({ alg: 'RS256', typ: 'JWT' })
+    JSON.stringify({ alg: 'RS256', typ: 'JWT' }),
   )
 
   const scope = options.scope.join(' ')
@@ -42,7 +42,7 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
     scope,
     aud: keys.token_uri,
     exp,
-    iat
+    iat,
   }
 
   if (delegationSubject) {
@@ -50,7 +50,7 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
   }
 
   const claimSet = base64Url.encode(
-    JSON.stringify(cs)
+    JSON.stringify(cs),
   )
 
   const key = prepareKey(keys.private_key)
@@ -59,13 +59,17 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
     name: 'RSASSA-PKCS1-v1_5',
     hash: {
       name: 'SHA-256',
-    }
+    },
   }
 
   const keyArrBuffer = base64.decode(key)
 
   const privateKey = await crypto.subtle.importKey(
-    'pkcs8', keyArrBuffer, algorithm, false, ['sign']
+    'pkcs8',
+    keyArrBuffer,
+    algorithm,
+    false,
+    ['sign'],
   )
 
   const inputArrBuffer = textEncoder.encode(`${header}.${claimSet}`)
@@ -73,7 +77,7 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
   const outputArrBuffer = await crypto.subtle.sign(
     { name: 'RSASSA-PKCS1-v1_5' },
     privateKey,
-    inputArrBuffer
+    inputArrBuffer,
   )
 
   const signature = base64Url.encode(outputArrBuffer)
@@ -82,20 +86,21 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
   return await fetchToken(assertion)
 }
 
-
 async function fetchToken(assertion: string) {
   const grantType = `urn:ietf:params:oauth:grant-type:jwt-bearer`
-  const body = `grant_type=${encodeURIComponent(grantType)}&assertion=${assertion}`
+  const body = `grant_type=${
+    encodeURIComponent(grantType)
+  }&assertion=${assertion}`
 
   const response = await fetch(
     `https://oauth2.googleapis.com/token`,
     {
       method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body
-    }
+      body,
+    },
   )
 
   if (response && !response.ok) {
@@ -103,17 +108,17 @@ async function fetchToken(assertion: string) {
       status: response.status,
       statusText: response.statusText,
       type: 'Google JWT',
-      message: await response.json()
+      message: await response.json(),
     }
     throw error
   }
 
-  const jsonData = await response.json();
+  const jsonData = await response.json()
 
   return {
     access_token: jsonData.access_token,
     expires_in: jsonData.expires_in,
-    token_type: jsonData.token_type
+    token_type: jsonData.token_type,
   }
 }
 
@@ -128,6 +133,9 @@ function prepareKey(key: string) {
     throw new Error('Invalid service account private key')
   }
 
-  const pemContents = pem.substring(pemHeader.length, pem.length - pemFooter.length)
+  const pemContents = pem.substring(
+    pemHeader.length,
+    pem.length - pemFooter.length,
+  )
   return pemContents
 }
