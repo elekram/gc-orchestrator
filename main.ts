@@ -11,6 +11,7 @@ import * as googleClassroom from './src/google-actions.ts'
 import { logTasks } from './src/log-tasks.ts'
 import { replaceTeacher } from './src/replace-teacher.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
+import { listCourses } from './src/list-courses.ts'
 
 const args = processArgs(Deno.args)
 
@@ -23,7 +24,7 @@ store.auth = await getToken(googleServiceAccountJson, {
   delegationSubject: appSettings.jwtSubject,
 })
 
-if (args.has('--VIEW-ALIASES'.toLowerCase())) {
+if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
   await logTasks(store, 'aliases')
@@ -45,57 +46,21 @@ if (args.has('--LIST-COURSES'.toLowerCase())) {
   console.log('\n\n\n%cPlease enter a User Id', 'color:cyan')
   const userId = prompt('\nUser Id:')
 
-  if (typeof userId === 'string') {
-    const courses = await googleClassroom.listCourses(
-      store.auth,
-      'teacherId',
-      userId,
-    )
-
-    if (!courses) {
-      console.log(`\n%cNo courses found for ${userId}`, 'color:red')
-      Deno.exit()
-    }
-
-    const rows: Record<string, string>[] = []
-
-    for (const course of courses) {
-      rows.push({
-        Id: course.id as string,
-        Name: course.name as string,
-        CreationTime: course.creationTime as string,
-        CourseState: course.courseState as string,
-      })
-    }
-
-    const sortedRows = rows.sort((
-      a,
-      b,
-    ) => (a.CourseState < b.CourseState ? -1 : 1))
-
-    console.table(sortedRows)
-  }
+  await listCourses(store, userId as string)
   Deno.exit()
 }
 
 if (args.has('--TRANSFER-COURSE-OWNERSHIP'.toLowerCase())) {
   await transferCourseOwenership()
+  Deno.exit()
 }
 
+logCsvFileLocations()
 addTimetableToStore(store)
 addDailyOrgReplacementsToStore(store)
 
 if (appSettings.validateSubjectsAndClasses) {
   testSubjects(store)
-  console.log(
-    `\n%c[ CSV File Location: ${appSettings.csvFileLocation.substring(1)} ]\n`,
-    'color:cyan',
-  )
-
-  console.log(
-    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
-    'color:cyan',
-  )
 
   const input = prompt('\nWould you like to continue? (y/n)')
 
@@ -223,8 +188,6 @@ async function transferCourseOwenership() {
     userInput_CourseAliasOrId,
     userInput_newCourseOwnerId,
   )
-
-  Deno.exit()
 }
 
 async function addTasksToStore(store: Store) {
@@ -370,4 +333,16 @@ async function deleteCourse(store: Store, alias: string) {
   const total = 1
 
   await googleClassroom.deleteCourse(auth, courseId, index, total)
+}
+
+function logCsvFileLocations() {
+  console.log(
+    `\n%c[ CSV File Location: ${appSettings.csvFileLocation.substring(1)} ]\n`,
+    'color:cyan',
+  )
+
+  console.log(
+    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
+    'color:cyan',
+  )
 }
