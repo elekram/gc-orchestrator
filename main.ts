@@ -13,7 +13,7 @@ import { replaceTeacher } from './src/replace-teacher.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
 import { parse } from 'std/csv/mod.ts'
-import { scratch } from './src/scratch.ts'
+import { staging } from './src/staging.ts'
 
 const args = processArgs(Deno.args)
 
@@ -34,7 +34,7 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
 }
 
 if (args.has('--STAGING'.toLowerCase())) {
-  await scratch(store)
+  await staging(store)
 
   Deno.exit()
 }

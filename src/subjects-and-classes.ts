@@ -1,4 +1,3 @@
-// import { csv } from './deps.ts'
 import { parse } from 'std/csv/mod.ts'
 import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
