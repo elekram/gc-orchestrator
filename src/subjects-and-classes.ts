@@ -82,22 +82,21 @@ export function addTimetableToStore(store: Store) {
 
   store.timetable.subjects = timetable.subjects
   store.timetable.classes = timetable.classes
-  // console.log(store.timetable.classes)
   store.timetable.compositeClasses = getCompositeClasses(classExceptions)
     .classes()
 
   console.log(
-    `\n%c[ ${store.timetable.subjects.size} Subject Added to Store from Timetable ]`,
+    `\n%c[ ${store.timetable.subjects.size} subjects added to Store from timetable ]`,
     'color:green',
   )
 
   console.log(
-    `\n%c[ ${store.timetable.classes.size} Classes added to Store from Timetable ]`,
+    `\n%c[ ${store.timetable.classes.size} classes added to Store from timetable ]`,
     'color:green',
   )
 
   console.log(
-    `\n%c[ ${store.timetable.compositeClasses.size} Composite Classes added to Store from Timetable ]\n`,
+    `\n%c[ ${store.timetable.compositeClasses.size} composite classes added to Store from timetable ]\n`,
     'color:green',
   )
 }

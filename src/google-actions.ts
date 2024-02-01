@@ -12,7 +12,7 @@ export async function listCourseMembers(
 
   let id = `${encodeURIComponent(courseId)}`
   if (isNaN(Number(courseId))) {
-    id = `d:${encodeURIComponent(courseId)}`
+    id = encodeURIComponent(`d:${courseId}`)
   }
 
   const path = 'https://classroom.googleapis.com/v1/courses'
@@ -106,6 +106,92 @@ export async function listCourses(
 
   console.log(`\n%c[ ${courseCount} total courses fetched ]\n`, 'color:cyan')
   return courses
+}
+
+export async function createCourseAlias(
+  auth: GoogleAuth,
+  courseId: string,
+  alias: string,
+  index: number,
+  total: number,
+) {
+  index = index + 1
+  const baseUrl = 'https://classroom.googleapis.com/v1/courses'
+  const requestUrl = `${baseUrl}/${courseId}/aliases`
+
+  const body = JSON.stringify({
+    alias: `d:${alias}`,
+  })
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(
+    `%cAdding alias ${alias} to course ${courseId} - ${index} of ${total} tasks`,
+    'color:lightblue',
+  )
+
+  try {
+    const response = await fetch(
+      requestUrl,
+      {
+        method: 'POST',
+        headers: getHeaders(auth),
+        body,
+      },
+    )
+    const data = await processResponse(response)
+    console.log(
+      `%c[ Alias ${alias} created for course ${courseId} - Status ${data.status} ]\n`,
+      'color:green',
+    )
+  } catch (e) {
+    const errorSource = `Error: createCourseAlias() ${courseId}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    console.log('Script must exit if alias cannot be created')
+    Deno.exit(1)
+  }
+}
+
+export async function deleteCourseAlias(
+  auth: GoogleAuth,
+  courseId: string,
+  alias: string,
+  index: number,
+  total: number,
+) {
+  index = index + 1
+  const encodedAlias = encodeURIComponent(`d:${alias}`)
+  const baseUrl = 'https://classroom.googleapis.com/v1/courses'
+  const requestUrl = `${baseUrl}/${courseId}/aliases/${encodedAlias}`
+
+  const delay = index * appSettings.taskDelay
+  await sleep(delay)
+
+  console.log(
+    `%cDeleting alias ${alias} for course ${courseId} - ${index} of ${total} tasks`,
+    'color:lightblue',
+  )
+
+  try {
+    const response = await fetch(
+      requestUrl,
+      {
+        method: 'DELETE',
+        headers: getHeaders(auth),
+      },
+    )
+    const data = await processResponse(response)
+    console.log(
+      `%c[ Alias ${alias} deleted for course ${courseId} - Status ${data.status} ]\n`,
+      'color:green',
+    )
+  } catch (e) {
+    const errorSource = `Error: deleteCourseAlias() ${courseId} - ${alias}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    console.log('Script must exit if alias cannot be created')
+    Deno.exit(1)
+  }
 }
 
 export async function getCourseAliases(

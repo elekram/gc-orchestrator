@@ -12,6 +12,8 @@ import { logTasks } from './src/log-tasks.ts'
 import { replaceTeacher } from './src/replace-teacher.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
+import { parse } from 'std/csv/mod.ts'
+import { scratch } from './src/scratch.ts'
 
 const args = processArgs(Deno.args)
 
@@ -28,6 +30,12 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
   await logTasks(store, 'aliases')
+  Deno.exit()
+}
+
+if (args.has('--STAGING'.toLowerCase())) {
+  await scratch(store)
+
   Deno.exit()
 }
 
@@ -57,7 +65,24 @@ if (args.has('--TRANSFER-COURSE-OWNERSHIP'.toLowerCase())) {
 
 logCsvFileLocations()
 addTimetableToStore(store)
-addDailyOrgReplacementsToStore(store)
+
+if (appSettings.runDailyorgTasks) {
+  const dailyorgFileLocation = appSettings.dailyorgFileLocation
+  const teacherReplacementsFile = appSettings.teacherPeriodReplacementsFileName
+
+  const teacherReplacementsCsv = parse(
+    await Deno.readTextFile(`${dailyorgFileLocation}${teacherReplacementsFile}`),
+    { skipFirstRow: true },
+  ) as Record<string, string>[]
+  addDailyOrgReplacementsToStore(store, teacherReplacementsCsv)
+}
+
+const input = prompt('\nWould you like to continue? (y/n)')
+
+if (input === null || input.toLowerCase() !== 'y') {
+  console.log('\n%c[ Script Exiting ]\n', 'color:magenta')
+  Deno.exit()
+}
 
 if (appSettings.validateSubjectsAndClasses) {
   testSubjects(store)
@@ -342,7 +367,7 @@ function logCsvFileLocations() {
   )
 
   console.log(
-    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
+    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]`,
     'color:cyan',
   )
 }

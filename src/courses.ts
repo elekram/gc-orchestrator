@@ -40,8 +40,10 @@ export async function addCourseAliasMapToStore(store: Store) {
     const googleCourseId = alias.id
     alias.aliases.forEach((e) => {
       const courseAlias = e
-      store.remote.courseAliases.set(courseAlias, googleCourseId)
-      store.remote.courseIds.set(googleCourseId, courseAlias)
+      if (courseAlias.substring(0, 2) === appSettings.aliasVersion) {
+        store.remote.courseAliases.set(courseAlias, googleCourseId)
+        store.remote.courseIds.set(googleCourseId, courseAlias)
+      }
     })
   })
 }

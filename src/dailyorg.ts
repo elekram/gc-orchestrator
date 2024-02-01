@@ -1,19 +1,12 @@
-import { parse } from 'std/csv/mod.ts'
 import * as parseDate from 'std/datetime/mod.ts'
 import appSettings from '../config/config.ts'
-import { TimetabledCourse } from './tasks.ts'
 import { Enrolments } from './subjects-and-classes.ts'
 import { Store } from './store.ts'
 
-const dailyorgFileLocation = appSettings.dailyorgFileLocation
-const teacherReplacementsFile = appSettings.teacherPeriodReplacementsFileName
-
-const teacherReplacementsCsv = parse(
-  await Deno.readTextFile(`${dailyorgFileLocation}${teacherReplacementsFile}`),
-  { skipFirstRow: true },
-) as Record<string, string>[]
-
-export function addDailyOrgReplacementsToStore(store: Store) {
+export function addDailyOrgReplacementsToStore(
+  store: Store,
+  teacherReplacementsCsv: Record<string, string>[],
+) {
   const replacementTeacherSchedule = getTodaysTeacherReplacements(
     teacherReplacementsCsv,
   )
@@ -40,7 +33,7 @@ export function addDailyOrgReplacementsToStore(store: Store) {
   }
 
   console.log(
-    `%c[ ${dailyOrgReplacementClasses.size} Scheduled Replacements added to Store from Dailyorg ]\n`,
+    `%c[ ${dailyOrgReplacementClasses.size} scheduled replacements added to Store from dailyorg for today ]\n`,
     'color:green',
   )
 
