@@ -5,9 +5,32 @@ import { diffArrays } from './diff-arrays.ts'
 import appSettings from '../config/config.ts'
 
 enum CourseType {
-  SubjectTeachers = 'SUBJECT_TEACHERS',
-  StandardClass = 'STANDARD_CLASS',
-  CommunityClass = 'COMMUNITY_CLASS',
+  TeacherCourse = 'TEACHER_COURSE',
+  ClassCourse = 'CLASS_COURSE',
+  SubjectCourse = 'SUBJECT_COURSE',
+}
+
+enum MemberGrouping {
+  ClassStudents = 'students',
+  SubjectStudents = 'subjectStudents',
+  SubjectTeachers = 'subjectTeachers',
+}
+
+enum CourseEnrolmentType {
+  Students = 'students',
+  Teachers = 'teachers',
+}
+
+enum CourseTaskType {
+  Create = 'create',
+  Update = 'update',
+  Archive = 'archive',
+  Delete = 'delete',
+}
+
+enum EnrolmentTask {
+  Add = 'POST',
+  Remove = 'DELETE',
 }
 
 export interface CourseTask {
@@ -34,17 +57,80 @@ export type TimetabledCourse = {
   students: string[]
 } | { courseCode: string; teachers: string[] }
 
-export async function addCommunalClassTasksToStore(store: Store) {
-  for (const [classCode, c] of store.timetable.classes) {
+export function addSubjectCourseTasksToStore(store: Store) {
+  /*
+    Subject course with teachers and students
+    from all the subjects classes enrolled
+  */
+  const alreadyProcessedSubjects = new Set<string>()
+
+  for (const [code, c] of store.timetable.classes) {
+    const subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
+
+    const subjectsCourseMap = appSettings.subjectsCourseMap
+
+    if (alreadyProcessedSubjects.has(subjectCode)) continue
+    if (c.isExceptedSubject) continue
+    if (!subjectsCourseMap.has(c.domain)) continue
+
+    const classYearLevel = subjectCode.slice(-2)
+
+    if (!isNumeric(classYearLevel)) {
+      throw `Year level in subject code failed check ${subjectCode}`
+    }
+
+    if (!subjectsCourseMap.get(c.domain)?.includes(classYearLevel)) continue
+
+    const courseType = CourseType.SubjectCourse
+    const academicYear = getAcademicYearForClasscode(classCode)
+
+    const alias =
+      `${appSettings.aliasVersion}.${courseType}.${subjectCode}.${academicYear}`
+
+    const course = {
+      id: alias,
+      ownerId: appSettings.classadmin,
+      name: `${subjectCode} (Students) | ${academicYear}`,
+      section: c.name,
+      description: `Domain: ${c.domain} - ${c.name} (Students)`,
+      descriptionHeading: `Subject Domain: ${c.domain}`,
+      courseState: 'ACTIVE',
+    }
+
+    if (!store.remote.courseAliases.has(alias)) {
+      store.tasks.courseCreationTasks.push({
+        type: CourseTaskType.Create,
+        props: {
+          updateMask: '',
+          requestBody: course,
+        },
+      })
+    }
+
+    if (store.remote.courseAliases.has(alias)) {
+      store.tasks.courseUpdateTasks.push({
+        type: CourseTaskType.Update,
+        props: {
+          updateMask: 'name,section,description,descriptionHeading,courseState',
+          requestBody: course,
+        },
+      })
+    }
+
+    alreadyProcessedSubjects.add(subjectCode)
   }
 }
 
 // deno-lint-ignore require-await
-export async function addCompositeClassTasksToStore(store: Store) {
-  for (const [classCode, c] of store.timetable.compositeClasses) {
-    const courseType = CourseType.StandardClass
+export async function addCompositeClassCourseTasksToStore(store: Store) {
+  for (const [code, c] of store.timetable.compositeClasses) {
+    const _subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
+
+    const courseType = CourseType.ClassCourse
     const academicYear = getAcademicYearForClasscode(classCode)
-    
+
     const alias = `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
 
     const name = `${classCode} | ${academicYear}`
@@ -70,7 +156,7 @@ export async function addCompositeClassTasksToStore(store: Store) {
 
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
-        type: 'create',
+        type: CourseTaskType.Create,
         props: {
           updateMask: '',
           requestBody: course,
@@ -80,7 +166,7 @@ export async function addCompositeClassTasksToStore(store: Store) {
 
     if (store.remote.courseAliases.has(alias)) {
       store.tasks.courseUpdateTasks.push({
-        type: 'update',
+        type: CourseTaskType.Update,
         props: {
           updateMask: 'name,section,description,descriptionHeading,courseState',
           requestBody: course,
@@ -91,25 +177,34 @@ export async function addCompositeClassTasksToStore(store: Store) {
 }
 
 // deno-lint-ignore require-await
-export async function addSubjectTasksToStore(store: Store) {
-  for (const [subjectCode, s] of store.timetable.subjects) {
-    if (s.isExceptedSubject) continue
-    const courseType = CourseType.SubjectTeachers
+export async function addTeacherCourseTasksToStore(store: Store) {
+  /*
+    Subject course with only teachers enrolled
+  */
+  const alreadyProcessedSubjects = new Set<string>()
+  for (const [code, c] of store.timetable.classes) {
+    const subjectCode = code.split('.')[0]
+    const _classCode = code.split('.')[1]
+
+    if (c.isExceptedSubject) continue
+    if (alreadyProcessedSubjects.has(c.subjectCode)) continue
+
+    const courseType = CourseType.TeacherCourse
     const alias = `${appSettings.aliasVersion}.${courseType}.${subjectCode}`
 
     const course = {
       id: alias,
       ownerId: appSettings.classadmin,
-      name: `${subjectCode} (Teachers)`,
-      section: s.name,
-      description: `Domain: ${s.domain} - ${s.name} (Teacher Planning Classroom)`,
-      descriptionHeading: `Subject Domain: ${s.domain}`,
+      name: `${c.subjectCode} (Teachers)`,
+      section: c.name,
+      description: `Domain: ${c.domain} - ${c.name} (Teacher Planning Classroom)`,
+      descriptionHeading: `Subject Domain: ${c.domain}`,
       courseState: 'ACTIVE',
     }
 
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
-        type: 'create',
+        type: CourseTaskType.Create,
         props: {
           updateMask: '',
           requestBody: course,
@@ -119,23 +214,28 @@ export async function addSubjectTasksToStore(store: Store) {
 
     if (store.remote.courseAliases.has(alias)) {
       store.tasks.courseUpdateTasks.push({
-        type: 'update',
+        type: CourseTaskType.Update,
         props: {
           updateMask: 'name,section,description,descriptionHeading,courseState',
           requestBody: course,
         },
       })
     }
+
+    alreadyProcessedSubjects.add(subjectCode)
   }
 }
 
 // deno-lint-ignore require-await
-export async function addClassTasksToStore(store: Store) {
-  for (const [classCode, c] of store.timetable.classes) {
-    if (c.isComposite) continue
-    if (c.isExceptedSubject) continue
+export async function addClassCourseTasksToStore(store: Store) {
+  for (const [code, c] of store.timetable.classes) {
+    const _subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
 
-    const courseType = CourseType.StandardClass
+    if (c.isExceptedSubject) continue
+    if (c.isComposite) continue
+
+    const courseType = CourseType.ClassCourse
     const academicYear = getAcademicYearForClasscode(classCode)
     const alias = `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
 
@@ -152,7 +252,7 @@ export async function addClassTasksToStore(store: Store) {
 
     if (!store.remote.courseAliases.has(alias)) {
       store.tasks.courseCreationTasks.push({
-        type: 'create',
+        type: CourseTaskType.Create,
         props: {
           updateMask: '',
           requestBody: course,
@@ -162,7 +262,7 @@ export async function addClassTasksToStore(store: Store) {
 
     if (store.remote.courseAliases.has(alias)) {
       store.tasks.courseUpdateTasks.push({
-        type: 'update',
+        type: CourseTaskType.Update,
         props: {
           updateMask: 'name,section,description,descriptionHeading,courseState',
           requestBody: course,
@@ -178,15 +278,22 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
   const compositeClassEnrolments = getEnrolments(
     store,
-    'students',
-    'class',
+    MemberGrouping.ClassStudents,
+    CourseType.ClassCourse,
     store.timetable.compositeClasses,
   )
 
   const classEnrolments = getEnrolments(
     store,
-    'students',
-    'class',
+    MemberGrouping.ClassStudents,
+    CourseType.ClassCourse,
+    store.timetable.classes,
+  )
+
+  const subjectCourseEnrollments = getEnrolments(
+    store,
+    MemberGrouping.SubjectStudents,
+    CourseType.SubjectCourse,
     store.timetable.classes,
   )
 
@@ -196,6 +303,10 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
   if (classEnrolments.length) {
     timetabledCourses = timetabledCourses.concat(classEnrolments)
+  }
+
+  if (subjectCourseEnrollments.length) {
+    timetabledCourses = timetabledCourses.concat(subjectCourseEnrollments)
   }
 
   const remoteCourseEnrolments = await Promise.all(
@@ -234,8 +345,8 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
           }
 
           store.tasks.enrolmentTasks.push({
-            type: 'students',
-            action: 'POST',
+            type: CourseEnrolmentType.Students,
+            action: EnrolmentTask.Add,
             courseId: remoteCourse.courseId as string,
             user: {
               userId: student,
@@ -246,8 +357,8 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
         const studentsToRemove = diffedStudents.arr2Diff
         for (const student of studentsToRemove) {
           store.tasks.enrolmentTasks.push({
-            type: 'students',
-            action: 'DELETE',
+            type: CourseEnrolmentType.Students,
+            action: EnrolmentTask.Remove,
             courseId: remoteCourse.courseId as string,
             user: {
               userId: student,
@@ -264,9 +375,8 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
   const dailyorgEnrolments: TimetabledCourse[] = []
 
   for (const [classCode, replacement] of store.replacements.dailyorgReplacements) {
-    // const courseCode = `${getAcademicYearForClasscode(classCode)}-${classCode}`
     const academicYear = getAcademicYearForClasscode(classCode)
-    const courseType = CourseType.StandardClass
+    const courseType = CourseType.ClassCourse
 
     const courseAlias =
       `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
@@ -280,10 +390,9 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
   const remoteCourseEnrolments = await Promise.all(
     dailyorgEnrolments.map(async (course, index) => {
       const courseId = course.courseCode
-
       return await googleClassroom.listCourseMembers(
         auth,
-        'teachers',
+        CourseEnrolmentType.Teachers,
         courseId,
         index,
         dailyorgEnrolments.length,
@@ -293,9 +402,8 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
 
   for (const [code, enrolments] of store.replacements.dailyorgReplacements) {
     const academicYear = getAcademicYearForClasscode(code)
-    // const courseId = `${academicYear}-${code}`
     const courseAlias =
-      `${appSettings.aliasVersion}.${CourseType.StandardClass}.${code}.${academicYear}`
+      `${appSettings.aliasVersion}.${CourseType.ClassCourse}.${code}.${academicYear}`
 
     if (!store.remote.courseAliases.has(courseAlias)) {
       console.log(`Course ${courseAlias} not found`)
@@ -310,8 +418,8 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
       if (remoteCourse[0]?.teachers.includes(teacher)) continue
 
       store.tasks.enrolmentTasks.push({
-        type: 'teachers',
-        action: 'POST',
+        type: CourseEnrolmentType.Teachers,
+        action: EnrolmentTask.Add,
         courseId: courseAlias,
         user: {
           userId: teacher,
@@ -327,35 +435,43 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const compositeClassEnrolments = getEnrolments(
     store,
-    'subjectTeachers',
-    'class',
+    MemberGrouping.SubjectTeachers,
+    CourseType.ClassCourse,
     store.timetable.compositeClasses,
   )
 
   timetabledCourses = timetabledCourses.concat(compositeClassEnrolments)
 
-  const classEnrolments = getEnrolments(
+  const classCourseEnrolments = getEnrolments(
     store,
-    'subjectTeachers',
-    'class',
+    MemberGrouping.SubjectTeachers,
+    CourseType.ClassCourse,
     store.timetable.classes,
   )
 
-  timetabledCourses = timetabledCourses.concat(classEnrolments)
+  timetabledCourses = timetabledCourses.concat(classCourseEnrolments)
 
-  const subjectEnrolments = getEnrolments(
+  const teacherCourseEnrolments = getEnrolments(
     store,
-    'subjectTeachers',
-    'subject',
-    store.timetable.subjects,
+    MemberGrouping.SubjectTeachers,
+    CourseType.TeacherCourse,
+    store.timetable.classes,
   )
 
-  timetabledCourses = timetabledCourses.concat(subjectEnrolments)
+  timetabledCourses = timetabledCourses.concat(teacherCourseEnrolments)
+
+  const subjectCourseEnrolments = getEnrolments(
+    store,
+    MemberGrouping.SubjectTeachers,
+    CourseType.SubjectCourse,
+    store.timetable.classes,
+  )
+
+  timetabledCourses = timetabledCourses.concat(subjectCourseEnrolments)
 
   const remoteCourseEnrolments = await Promise.all(
     timetabledCourses.map(async (course, index) => {
       const courseId = course.courseCode
-
       return await googleClassroom.listCourseMembers(
         auth,
         'teachers',
@@ -369,7 +485,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
   for (const tc of timetabledCourses) {
     const courseId = tc.courseCode
 
-    if (!('subjectTeachers' in tc)) {
+    if (!(MemberGrouping.SubjectTeachers in tc)) {
       continue
     }
 
@@ -388,8 +504,8 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
           }
 
           store.tasks.enrolmentTasks.push({
-            type: 'teachers',
-            action: 'POST',
+            type: CourseEnrolmentType.Teachers,
+            action: EnrolmentTask.Add,
             courseId: remoteCourse.courseId as string,
             user: {
               userId: teacher,
@@ -407,10 +523,17 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
             continue
           }
 
+          const classCode = courseId.split('.')[2] // classcode from course alias
+          if (
+            store.replacements.dailyorgReplacements.has(classCode) &&
+            store.replacements.dailyorgReplacements.get(classCode)
+              ?.subjectTeachers.has(teacher)
+          ) continue
+
           if (appSettings.removeNonTimetabledTeachers) {
             store.tasks.enrolmentTasks.push({
-              type: 'teachers',
-              action: 'DELETE',
+              type: CourseEnrolmentType.Teachers,
+              action: EnrolmentTask.Remove,
               courseId: remoteCourse.courseId as string,
               user: {
                 userId: teacher,
@@ -466,7 +589,7 @@ export async function addReplacementEnrolmentTasksToStore(store: Store) {
 
           store.tasks.enrolmentTasks.push({
             type: 'teachers',
-            action: 'POST',
+            action: EnrolmentTask.Add,
             courseId: remoteCourse.courseId as string,
             user: {
               userId: teacher,
@@ -486,7 +609,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
     const aliasFields = courseAlias.split('.')
     const courseType = aliasFields[1]
 
-    if (courseType === CourseType.SubjectTeachers) {
+    if (courseType === CourseType.TeacherCourse) {
       continue
     }
 
@@ -500,18 +623,37 @@ export async function addCourseArchiveTasksToStore(store: Store) {
     }
   }
 
-  for (const [classCode, _c] of store.timetable.classes) {
-    const academicYear = getAcademicYearForClasscode(classCode)
-    const currentTimeTabledClass =
-      `${appSettings.aliasVersion}.${CourseType.StandardClass}.${classCode}.${academicYear}`
+  for (const [code, c] of store.timetable.classes) {
+    const subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
 
-    remoteCourseArchiveCandidates.delete(currentTimeTabledClass)
+    const academicYear = getAcademicYearForClasscode(classCode)
+    const currentTimetabledClass =
+      `${appSettings.aliasVersion}.${CourseType.ClassCourse}.${classCode}.${academicYear}`
+
+    remoteCourseArchiveCandidates.delete(currentTimetabledClass)
+
+    const classYearLevel = subjectCode.slice(-2)
+
+    if (!isNumeric(classYearLevel)) {
+      throw `Year level in subject code failed check ${subjectCode}`
+    }
+
+    if (appSettings.subjectsCourseMap.get(c.domain)?.includes(classYearLevel)) {
+      const currentTimetabledSujectCourse =
+        `${appSettings.aliasVersion}.${CourseType.SubjectCourse}.${subjectCode}.${academicYear}`
+
+      remoteCourseArchiveCandidates.delete(currentTimetabledSujectCourse)
+    }
   }
 
-  for (const [classCode, _c] of store.timetable.compositeClasses) {
+  for (const [code, _c] of store.timetable.compositeClasses) {
+    const _subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
+
     const academicYear = getAcademicYearForClasscode(classCode)
     const currentTimeTabledClass =
-      `${appSettings.aliasVersion}.${CourseType.StandardClass}.${classCode}.${academicYear}`
+      `${appSettings.aliasVersion}.${CourseType.ClassCourse}.${classCode}.${academicYear}`
 
     remoteCourseArchiveCandidates.delete(currentTimeTabledClass)
   }
@@ -545,7 +687,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
     if (store.remote.courseAliases.has(alias)) {
       store.tasks.courseArchiveTasks.push({
-        type: 'archive',
+        type: CourseTaskType.Archive,
         props,
       })
     }
@@ -567,7 +709,7 @@ export async function addCourseDeletionTasksToStore(store: Store) {
     const aliasFields = courseAlias.split('.')
     const courseType = aliasFields[1]
 
-    if (courseType === CourseType.SubjectTeachers) {
+    if (courseType === CourseType.TeacherCourse) {
       continue
     }
 
@@ -583,31 +725,64 @@ export async function addCourseDeletionTasksToStore(store: Store) {
 
 export function getEnrolments(
   store: Store,
-  memberType: 'students' | 'subjectTeachers',
-  courseType: 'subject' | 'class',
+  memberGrouping: MemberGrouping,
+  courseType: CourseType,
   courses: Map<string, Enrolments>,
 ) {
+  const values = {
+    [MemberGrouping.ClassStudents]: 'students',
+    [MemberGrouping.SubjectStudents]: 'students',
+    [MemberGrouping.SubjectTeachers]: 'subjectTeachers',
+  }
+
+  const remoteEnrolmentTypes = new Map(Object.entries(values))
+
   const timetabledCourses = []
-  let courseCode: string
+  const uniqueTimetabledCourses = new Set()
 
   for (const [code, c] of courses) {
-    if (courseType === 'subject') {
-      courseCode = `${appSettings.aliasVersion}.${CourseType.SubjectTeachers}.${code}`
-    } else {
-      const academicYear = getAcademicYearForClasscode(code)
+    let courseCode = ''
+    const subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
+
+    if (courseType === 'TEACHER_COURSE') {
       courseCode =
-        `${appSettings.aliasVersion}.${CourseType.StandardClass}.${code}.${academicYear}`
+        `${appSettings.aliasVersion}.${CourseType.TeacherCourse}.${subjectCode}`
     }
 
-    const members = Array.from(c[memberType])
+    if (courseType === 'CLASS_COURSE') {
+      const academicYear = getAcademicYearForClasscode(classCode)
+      courseCode =
+        `${appSettings.aliasVersion}.${CourseType.ClassCourse}.${classCode}.${academicYear}`
+    }
+
+    if (courseType === 'SUBJECT_COURSE') {
+      const academicYear = getAcademicYearForClasscode(classCode)
+      courseCode =
+        `${appSettings.aliasVersion}.${CourseType.SubjectCourse}.${subjectCode}.${academicYear}`
+    }
+
+    if (!courseCode) throw 'Error: getEnrolments() - courseCode undefined'
+
+    const members = Array.from(c[memberGrouping])
+
+    const remoteMemberType = remoteEnrolmentTypes.get(memberGrouping)
+
+    if (!remoteMemberType) throw 'Membertype undefined'
 
     if (store.remote.courseAliases.has(courseCode)) {
-      timetabledCourses.push({
+      uniqueTimetabledCourses.add(JSON.stringify({
         courseCode,
-        [memberType]: members,
-      } as TimetabledCourse)
+        [remoteMemberType]: members,
+      }))
     }
   }
+
+  for (const uniqueCourse of uniqueTimetabledCourses) {
+    const parsedCourse = JSON.parse(uniqueCourse as string)
+    timetabledCourses.push(parsedCourse as TimetabledCourse)
+  }
+
   return timetabledCourses
 }
 
@@ -649,4 +824,8 @@ export function getAcademicYearForClasscode(classCode: string) {
   }
 
   return releventYear
+}
+
+function isNumeric(value: string) {
+  return /^[0-9]+$/.test(value)
 }

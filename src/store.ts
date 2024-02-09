@@ -1,5 +1,5 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
-import { Class, CompositeClass, Subject } from './subjects-and-classes.ts'
+import { Class, CompositeClass } from './subjects-and-classes.ts'
 import { CourseTask } from './tasks.ts'
 import { CourseMemberProps } from './google-actions.ts'
 import { TimetabledCourse } from './tasks.ts'
@@ -8,7 +8,7 @@ import { Enrolments } from './subjects-and-classes.ts'
 export interface Store {
   auth: GoogleAuth
   timetable: {
-    subjects: Map<string, Subject>
+    subjects: Set<string>
     classes: Map<string, Class>
     compositeClasses: Map<string, CompositeClass>
   }
@@ -39,7 +39,7 @@ export const store: Store = {
     token_type: '',
   },
   timetable: {
-    subjects: new Map(),
+    subjects: new Set<string>(),
     classes: new Map(),
     compositeClasses: new Map(),
   },

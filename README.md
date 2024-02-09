@@ -60,9 +60,19 @@ const academicYearMap = {
   '12': '2023',
 }
 
+const subjectsCourseMap = {
+  'MATHS': ['07', '08', '09', '10'],
+}
+
+const subjectAdmins = {
+  'MATHS': 'admin@domain',
+}
+
 const appSettings = {
   aliasVersion: 'v2',
   academicYearMap: new Map(Object.entries(academicYearMap)),
+  subjectsCourseMap: new Map(Object.entries(subjectsCourseMap)),
+  subjectAdmins: new Map(Object.entries(subjectAdmins)),
   verboseWarnings: false,
   serviceAccountCredentials: './config/<your google credentials file>.json',
   scopes: [

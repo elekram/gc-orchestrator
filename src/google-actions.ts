@@ -10,13 +10,6 @@ export async function listCourseMembers(
 ) {
   index = index + 1
 
-  let id = `${encodeURIComponent(courseId)}`
-  if (isNaN(Number(courseId))) {
-    id = encodeURIComponent(`d:${courseId}`)
-  }
-
-  const path = 'https://classroom.googleapis.com/v1/courses'
-
   const delay = index * appSettings.taskDelay
   await sleep(delay)
 
@@ -25,38 +18,62 @@ export async function listCourseMembers(
     'color:lightblue',
   )
 
-  try {
-    const response = await fetch(
-      `${path}/${id}/${type}`,
-      {
-        method: 'GET',
-        headers: getHeaders(auth),
-      },
-    )
-    const data = await processResponse(response)
-    const members: string[] = []
+  let id = `${encodeURIComponent(courseId)}`
+  if (isNaN(Number(courseId))) {
+    id = encodeURIComponent(`d:${courseId}`)
+  }
 
-    if (!data.responseJson[type]) {
-      return {
-        courseId,
-        [type]: [],
+  const path = 'https://classroom.googleapis.com/v1/courses'
+  const pageSize = `pageSize=500`
+
+  let nextPageToken = ''
+  const members: string[] = []
+  let subtask = false
+  do {
+    if (subtask) {
+      console.log(
+        `%c  ${courseId} has more than 30 members. Fetching additional ${type}.`,
+        'color:cyan',
+      )
+    }
+
+    const pageToken = `pageToken=${nextPageToken}`
+    try {
+      const response = await fetch(
+        `${path}/${id}/${type}?${pageSize}&${pageToken}`,
+        {
+          method: 'GET',
+          headers: getHeaders(auth),
+        },
+      )
+
+      const data = await processResponse(response)
+
+      if (!data.responseJson[type]) {
+        return {
+          courseId,
+          [type]: [],
+        }
       }
-    }
 
-    if (data.responseJson[type]) {
-      data.responseJson[type].forEach((member: Record<string, unknown>) => {
-        const memberProfile = member.profile as Record<string, string>
-        members.push(memberProfile.emailAddress)
-      })
-    }
+      if (data.responseJson[type]) {
+        data.responseJson[type].forEach((member: Record<string, unknown>) => {
+          const memberProfile = member.profile as Record<string, string>
+          members.push(memberProfile.emailAddress)
+        })
+      }
 
-    return {
-      courseId,
-      [type]: members,
+      nextPageToken = data.responseJson.nextPageToken
+      subtask = true
+    } catch (e) {
+      console.log(e)
+      console.log(`Error: listCourseMembers() --> ${courseId} - type: ${type}`)
     }
-  } catch (e) {
-    console.log(e)
-    console.log(`Error with ${courseId}`)
+  } while (nextPageToken)
+
+  return {
+    courseId,
+    [type]: members,
   }
 }
 

@@ -3,15 +3,6 @@ import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
 import { tinyLogger } from './deps.ts'
 
-export interface Subject {
-  name: string
-  domain: string
-  subjectLeaders: Set<string>
-  subjectTeachers: Set<string>
-  students: Set<string>
-  isExceptedSubject: boolean
-}
-
 export interface Class {
   subjectCode: string
   classCodeWithSemeterPrefix: string
@@ -20,6 +11,7 @@ export interface Class {
   subjectLeaders: Set<string>
   subjectTeachers: Set<string>
   classTeachers: Set<string>
+  subjectStudents: Set<string>
   students: Set<string>
   periodSchedule: Map<number, Set<number>>
   isComposite: boolean
@@ -34,12 +26,14 @@ export interface CompositeClass {
   subjectTeachers: Set<string>
   classTeachers: Set<string>
   domain: string
+  subjectStudents: Set<string>
   students: Set<string>
 }
 
 export interface Enrolments {
   subjectTeachers: Set<string>
   students: Set<string>
+  subjectStudents: Set<string>
 }
 
 const gooogleDomain = String(appSettings.domain)
@@ -50,6 +44,7 @@ const studentLessonsCsvFile = appSettings.studentLessonsCsv
 const unscheduledDutiesCsvFile = appSettings.unscheduledDutiesCsvFileName
 const subjectExceptions = appSettings.subjectExceptions
 const classExceptions = appSettings.compositeClassExceptions
+const subjectAdmins = appSettings.subjectAdmins
 
 const classNames = parse(
   await Deno.readTextFile(`${csvFileLocation}${classNamesCsvFile}`),
@@ -174,7 +169,11 @@ function getCompositeClasses(classExceptions: string[]) {
       compositeClassName += `${classCode.substring(1)}-`
 
       const leaders = getLeaders(domain)
-      const teachersFromSubjectCode = getSubjectTeachers(subjectCode)
+      const teachersFromSubjectCode = getSubjectTeachers(
+        subjectCode,
+        domain,
+        subjectAdmins,
+      )
       const teachersFromClassCode = getClassTeachers(classCode)
       const studentsFromClassCode = getStudents(classCode)
 
@@ -187,7 +186,7 @@ function getCompositeClasses(classExceptions: string[]) {
 
     const trimmedCompositeClassName = compositeClassName.slice(0, -1)
 
-    compositeClasses.set(trimmedCompositeClassName, {
+    compositeClasses.set(`COMPOSITE.${trimmedCompositeClassName}`, {
       subjectNames,
       classCodes,
       classCodesWithSemeterPrefix,
@@ -196,6 +195,7 @@ function getCompositeClasses(classExceptions: string[]) {
       classTeachers: new Set(classTeachers),
       domain,
       students: new Set(students),
+      subjectStudents: new Set(),
     })
   }
 
@@ -213,9 +213,8 @@ export function getSubjectsAndClasses(
   compositeClassCodes: Set<string>,
   subjectExceptions: string[],
 ) {
-  const subjects: Map<string, Subject> = new Map()
   const classes: Map<string, Class> = new Map()
-
+  const subjects = new Set<string>()
   for (const row of classNames) {
     const subjectCodeWithSemeterPrefix = row['Subject Code'] as string
     const classCodeWithSemeterPrefix = row['Class Code'] as string
@@ -233,30 +232,28 @@ export function getSubjectsAndClasses(
     const name = (row['Subject Name'] as string).replace(/['"]+/g, '')
     const domain = (row['Faculty Name'] as string).split('_')[0].toUpperCase()
     const leaders = getLeaders(domain)
-    const subjectTeachers = getSubjectTeachers(subjectCodeWithSemeterPrefix)
+    const subjectTeachers = getSubjectTeachers(
+      subjectCodeWithSemeterPrefix,
+      domain,
+      subjectAdmins,
+    )
     const classTeachers = getClassTeachers(classCodeWithSemeterPrefix)
+    const subjectStudents = getSubjectStudents(subjectCodeWithSemeterPrefix)
     const students = getStudents(classCodeWithSemeterPrefix)
+
+    subjects.add(subjectCode)
 
     leaders?.forEach((leader) => subjectTeachers.add(leader))
     const periodSchedule = getPeriodSchedule(classCodeWithSemeterPrefix)
 
     let isExceptedSubject = false
-    if (appSettings.subjectExceptions.includes(subjectCode)) {
+    if (subjectExceptions.includes(subjectCode)) {
       isExceptedSubject = true
     }
 
     let isComposite = false
     if (compositeClassCodes.has(classCode)) {
       isComposite = true
-    }
-
-    const s: Subject = {
-      name,
-      domain,
-      subjectLeaders: new Set<string>(leaders),
-      subjectTeachers: new Set<string>(subjectTeachers),
-      students: new Set<string>(),
-      isExceptedSubject,
     }
 
     const c: Class = {
@@ -267,20 +264,17 @@ export function getSubjectsAndClasses(
       subjectLeaders: new Set<string>(leaders),
       subjectTeachers: new Set<string>(subjectTeachers),
       classTeachers: new Set<string>(classTeachers),
+      subjectStudents: new Set<string>(subjectStudents),
       students: new Set<string>(students),
       periodSchedule,
       isComposite,
       isExceptedSubject,
     }
 
-    if (!subjectExceptions.includes(subjectCode)) {
-      subjects.set(subjectCode, s)
-    }
-
-    classes.set(classCode, c)
+    classes.set(`${subjectCode}.${classCode}`, c)
   }
 
-  return { subjects, classes }
+  return { classes, subjects }
 }
 
 function getClassTeachers(classCodeWithSemeterPrefix: string) {
@@ -357,7 +351,28 @@ function getStudents(classCode: string): Set<string> {
   return students
 }
 
-function getSubjectTeachers(code: string): Set<string> {
+function getSubjectStudents(subjectCode: string): Set<string> {
+  const subjectStudents = new Set<string>()
+
+  for (const row of classNames) {
+    if (row['Subject Code'] === subjectCode) {
+      if (!row['Class Code']) continue
+      const students = getStudents(row['Class Code'])
+
+      for (const student of students) {
+        subjectStudents.add(student)
+      }
+    }
+  }
+
+  return subjectStudents
+}
+
+function getSubjectTeachers(
+  code: string,
+  domain: string,
+  subjectAdmins: Map<string, string>,
+): Set<string> {
   const teachers = new Set<string>()
 
   for (const row of timetable) {
@@ -369,6 +384,10 @@ function getSubjectTeachers(code: string): Set<string> {
       }
     }
   }
+
+  const domainTeacher = subjectAdmins.get(domain)
+  if (domainTeacher) teachers.add(domainTeacher)
+
   return teachers
 }
 

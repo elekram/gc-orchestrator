@@ -34,8 +34,14 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
 }
 
 if (args.has('--STAGING'.toLowerCase())) {
+  addTimetableToStore(store)
+  await addCoursesToStore(store)
+  await addCourseAliasMapToStore(store)
+  tasks.addSubjectCourseTasksToStore(store)
+  tasks.addTeacherEnrolmentTasksToStore(store)
+  await logTasks(store, 'course')
+  await logTasks(store, 'enrolment')
   await staging(store)
-
   Deno.exit()
 }
 
@@ -217,9 +223,10 @@ async function transferCourseOwenership() {
 
 async function addTasksToStore(store: Store) {
   if (appSettings.runCourseTasks) {
-    await tasks.addSubjectTasksToStore(store)
-    await tasks.addClassTasksToStore(store)
-    await tasks.addCompositeClassTasksToStore(store)
+    await tasks.addTeacherCourseTasksToStore(store)
+    await tasks.addClassCourseTasksToStore(store)
+    await tasks.addCompositeClassCourseTasksToStore(store)
+    await tasks.addSubjectCourseTasksToStore(store)
   }
 
   if (appSettings.runEnrolmentTasks) {
@@ -334,14 +341,9 @@ async function runCourseDeletionTasks(store: Store) {
 }
 
 function viewSubejct(subject: string) {
-  if (!store.timetable.subjects.has(subject.toUpperCase())) {
-    console.log('%cSubject not found. Exiting.', 'color:red')
-  }
-  const s = store.timetable.subjects.get(subject.toUpperCase())
-  console.log('\n%cSubject', 'color:cyan')
-  if (s) {
-    console.log(s)
-  }
+  // if (!store.timetable.subjects.has(subject.toUpperCase())) {
+  //   console.log('%cSubject not found. Exiting.', 'color:red')
+  // }
 
   console.log('\n%cSubject Classes', 'color:magenta')
   for (const [_key, c] of store.timetable.classes) {

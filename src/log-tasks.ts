@@ -3,7 +3,7 @@ import { Store } from './store.ts'
 import { Column, stringify } from 'std/csv/mod.ts'
 import { format } from 'std/datetime/mod.ts'
 
-export async function logTasks(store: Store, type: string) {
+export async function logTasks(store: Store, type: 'enrolment' | 'course' | 'aliases') {
   let t = '-tasks'
   if (type === 'aliases') {
     t = ''

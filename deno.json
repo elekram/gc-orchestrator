@@ -6,7 +6,7 @@
     "run": "deno run -A --check main.ts --run-tasks",
     "log-course-tasks": "deno run -A main.ts --log-course-tasks",
     "log-enrolment-tasks": "deno run -A main.ts --log-enrolment-tasks",
-    "aliases": "deno run -A --check main.ts --view-aliases",
+    "aliases": "deno run -A --check main.ts --view-course-aliases",
     "view-subject": "deno run -A --check main.ts --view-subject",
     "view-composites": "deno run -A --check main.ts --view-composites",
     "replace-teacher": "deno run -A --check main.ts --replace-teacher",
