@@ -3,7 +3,6 @@ import { Class, CompositeClass } from './subjects-and-classes.ts'
 import { CourseTask } from './tasks.ts'
 import { CourseMemberProps } from './google-actions.ts'
 import { TimetabledCourse } from './tasks.ts'
-import { Enrolments } from './subjects-and-classes.ts'
 
 export interface Store {
   auth: GoogleAuth
@@ -14,7 +13,9 @@ export interface Store {
   }
   replacements: {
     individualReplacements: TimetabledCourse[]
-    dailyorgReplacements: Map<string, Enrolments>
+    dailyorgReplacements: Map<string, {
+      subjectTeachers: Set<string>
+    }>
   }
   remote: {
     courses: Map<string, unknown>

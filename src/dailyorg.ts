@@ -1,6 +1,6 @@
 import * as parseDate from 'std/datetime/mod.ts'
 import appSettings from '../config/config.ts'
-import { Enrolments } from './subjects-and-classes.ts'
+
 import { Store } from './store.ts'
 
 export function addDailyOrgReplacementsToStore(
@@ -12,7 +12,11 @@ export function addDailyOrgReplacementsToStore(
     teacherReplacementsCsv,
   )
 
-  const dailyOrgReplacementClasses: Map<string, Enrolments> = new Map()
+  const dailyOrgReplacementClasses: Map<string, {
+    subjectStudents: Set<string>
+    subjectTeachers: Set<string>
+    students: Set<string>
+  }> = new Map()
 
   for (const [teacher, classes] of replacementTeacherSchedule) {
     for (const c of classes) {

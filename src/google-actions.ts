@@ -32,8 +32,8 @@ export async function listCourseMembers(
   do {
     if (subtask) {
       console.log(
-        `%c  ${courseId} has more than 30 members. Fetching additional ${type}.`,
-        'color:cyan',
+        `%c$Fetching additional ${type} for course ${courseId}.`,
+        'color:lightblue',
       )
     }
 

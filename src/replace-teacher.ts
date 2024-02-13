@@ -35,10 +35,11 @@ export function replaceTeacher(
     )
   }
   const replacementCourses: TimetabledCourse[] = []
-  for (const courseCode of replacementClasses) {
+  for (const courseAlias of replacementClasses) {
     replacementCourses.push({
-      courseCode,
+      courseAlias,
       teachers: [replacementTeacher],
+      students: [],
     })
   }
 

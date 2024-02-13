@@ -1,6 +1,5 @@
 import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
-import { Enrolments } from './subjects-and-classes.ts'
 import { diffArrays } from './diff-arrays.ts'
 import appSettings from '../config/config.ts'
 
@@ -10,7 +9,7 @@ enum CourseType {
   SubjectCourse = 'SUBJECT_COURSE',
 }
 
-enum MemberGrouping {
+enum TimetableGrouping {
   ClassStudents = 'students',
   SubjectStudents = 'subjectStudents',
   SubjectTeachers = 'subjectTeachers',
@@ -53,9 +52,10 @@ export interface CourseTask {
 }
 
 export type TimetabledCourse = {
-  courseCode: string
+  courseAlias: string
   students: string[]
-} | { courseCode: string; teachers: string[] }
+  teachers: string[]
+}
 
 export function addSubjectCourseTasksToStore(store: Store) {
   /*
@@ -278,21 +278,21 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
   const compositeClassEnrolments = getEnrolments(
     store,
-    MemberGrouping.ClassStudents,
+    TimetableGrouping.ClassStudents,
     CourseType.ClassCourse,
     store.timetable.compositeClasses,
   )
 
   const classEnrolments = getEnrolments(
     store,
-    MemberGrouping.ClassStudents,
+    TimetableGrouping.ClassStudents,
     CourseType.ClassCourse,
     store.timetable.classes,
   )
 
   const subjectCourseEnrollments = getEnrolments(
     store,
-    MemberGrouping.SubjectStudents,
+    TimetableGrouping.SubjectStudents,
     CourseType.SubjectCourse,
     store.timetable.classes,
   )
@@ -311,7 +311,7 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
   const remoteCourseEnrolments = await Promise.all(
     timetabledCourses.map(async (course, index) => {
-      const courseId = course.courseCode
+      const courseId = course.courseAlias
 
       return await googleClassroom.listCourseMembers(
         auth,
@@ -324,7 +324,7 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
   )
 
   for (const tc of timetabledCourses) {
-    const courseId = tc.courseCode
+    const courseId = tc.courseAlias
 
     if (!('students' in tc)) {
       continue
@@ -382,14 +382,15 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
       `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
 
     dailyorgEnrolments.push({
-      courseCode: courseAlias,
+      courseAlias,
       teachers: [...replacement.subjectTeachers],
+      students: [],
     })
   }
 
   const remoteCourseEnrolments = await Promise.all(
     dailyorgEnrolments.map(async (course, index) => {
-      const courseId = course.courseCode
+      const courseId = course.courseAlias
       return await googleClassroom.listCourseMembers(
         auth,
         CourseEnrolmentType.Teachers,
@@ -435,7 +436,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const compositeClassEnrolments = getEnrolments(
     store,
-    MemberGrouping.SubjectTeachers,
+    TimetableGrouping.SubjectTeachers,
     CourseType.ClassCourse,
     store.timetable.compositeClasses,
   )
@@ -444,7 +445,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const classCourseEnrolments = getEnrolments(
     store,
-    MemberGrouping.SubjectTeachers,
+    TimetableGrouping.SubjectTeachers,
     CourseType.ClassCourse,
     store.timetable.classes,
   )
@@ -453,7 +454,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const teacherCourseEnrolments = getEnrolments(
     store,
-    MemberGrouping.SubjectTeachers,
+    TimetableGrouping.SubjectTeachers,
     CourseType.TeacherCourse,
     store.timetable.classes,
   )
@@ -462,7 +463,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const subjectCourseEnrolments = getEnrolments(
     store,
-    MemberGrouping.SubjectTeachers,
+    TimetableGrouping.SubjectTeachers,
     CourseType.SubjectCourse,
     store.timetable.classes,
   )
@@ -471,7 +472,7 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   const remoteCourseEnrolments = await Promise.all(
     timetabledCourses.map(async (course, index) => {
-      const courseId = course.courseCode
+      const courseId = course.courseAlias
       return await googleClassroom.listCourseMembers(
         auth,
         'teachers',
@@ -483,9 +484,9 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
   )
 
   for (const tc of timetabledCourses) {
-    const courseId = tc.courseCode
+    const courseId = tc.courseAlias
 
-    if (!(MemberGrouping.SubjectTeachers in tc)) {
+    if (!(TimetableGrouping.SubjectTeachers in tc)) {
       continue
     }
 
@@ -552,7 +553,7 @@ export async function addReplacementEnrolmentTasksToStore(store: Store) {
 
   const remoteCourseEnrolments = await Promise.all(
     replacementCourses.map(async (course, index) => {
-      const courseId = course.courseCode
+      const courseId = course.courseAlias
 
       return await googleClassroom.listCourseMembers(
         auth,
@@ -569,7 +570,7 @@ export async function addReplacementEnrolmentTasksToStore(store: Store) {
       continue
     }
 
-    const courseId = replacementCourse.courseCode
+    const courseId = replacementCourse.courseAlias
     const teachers = replacementCourse.teachers
 
     // if (!remoteCourseEnrolments.length) continue
@@ -725,62 +726,71 @@ export async function addCourseDeletionTasksToStore(store: Store) {
 
 export function getEnrolments(
   store: Store,
-  memberGrouping: MemberGrouping,
+  timetableGrouping: TimetableGrouping,
   courseType: CourseType,
-  courses: Map<string, Enrolments>,
+  timetable: Map<string, {
+    subjectTeachers: Set<string>
+    subjectStudents: Set<string>
+    students: Set<string>
+  }>,
 ) {
-  const values = {
-    [MemberGrouping.ClassStudents]: 'students',
-    [MemberGrouping.SubjectStudents]: 'students',
-    [MemberGrouping.SubjectTeachers]: 'subjectTeachers',
+  const timetableGroupings = {
+    [TimetableGrouping.ClassStudents]: 'students',
+    [TimetableGrouping.SubjectStudents]: 'students',
+    [TimetableGrouping.SubjectTeachers]: 'subjectTeachers',
   }
 
-  const remoteEnrolmentTypes = new Map(Object.entries(values))
+  const remoteEnrolmentTypes = new Map(Object.entries(timetableGroupings))
 
-  const timetabledCourses = []
+  const timetabledCourses: {
+    courseAlias: string
+    students: string[]
+    teachers: string[]
+  }[] = []
+
   const uniqueTimetabledCourses = new Set()
 
-  for (const [code, c] of courses) {
-    let courseCode = ''
+  for (const [code, c] of timetable) {
+    let courseAlias = ''
     const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
 
-    if (courseType === 'TEACHER_COURSE') {
-      courseCode =
+    if (courseType === CourseType.TeacherCourse) {
+      courseAlias =
         `${appSettings.aliasVersion}.${CourseType.TeacherCourse}.${subjectCode}`
     }
 
-    if (courseType === 'CLASS_COURSE') {
+    if (courseType === CourseType.ClassCourse) {
       const academicYear = getAcademicYearForClasscode(classCode)
-      courseCode =
+      courseAlias =
         `${appSettings.aliasVersion}.${CourseType.ClassCourse}.${classCode}.${academicYear}`
     }
 
-    if (courseType === 'SUBJECT_COURSE') {
+    if (courseType === CourseType.SubjectCourse) {
       const academicYear = getAcademicYearForClasscode(classCode)
-      courseCode =
+      courseAlias =
         `${appSettings.aliasVersion}.${CourseType.SubjectCourse}.${subjectCode}.${academicYear}`
     }
 
-    if (!courseCode) throw 'Error: getEnrolments() - courseCode undefined'
+    if (!courseAlias) throw 'Error: getEnrolments() - courseCode undefined'
 
-    const members = Array.from(c[memberGrouping])
+    const courseEnrollments = Array.from(c[timetableGrouping])
 
-    const remoteMemberType = remoteEnrolmentTypes.get(memberGrouping)
+    const remoteMemberType = remoteEnrolmentTypes.get(timetableGrouping)
 
-    if (!remoteMemberType) throw 'Membertype undefined'
+    if (!remoteMemberType) throw 'Member type undefined'
 
-    if (store.remote.courseAliases.has(courseCode)) {
+    if (store.remote.courseAliases.has(courseAlias)) {
       uniqueTimetabledCourses.add(JSON.stringify({
-        courseCode,
-        [remoteMemberType]: members,
+        courseAlias,
+        [remoteMemberType]: courseEnrollments,
       }))
     }
   }
 
   for (const uniqueCourse of uniqueTimetabledCourses) {
     const parsedCourse = JSON.parse(uniqueCourse as string)
-    timetabledCourses.push(parsedCourse as TimetabledCourse)
+    timetabledCourses.push(parsedCourse)
   }
 
   return timetabledCourses
