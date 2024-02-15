@@ -416,6 +416,7 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
     })
 
     for (const teacher of enrolments.subjectTeachers) {
+      if (!store.remote.activeUsers.has(teacher)) continue
       if (remoteCourse[0]?.teachers.includes(teacher)) continue
 
       store.tasks.enrolmentTasks.push({

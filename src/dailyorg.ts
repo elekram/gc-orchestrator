@@ -50,6 +50,7 @@ export function addDailyOrgReplacementsToStore(
     `%c[ ${dailyOrgReplacementClasses.size} scheduled replacements added to Store from dailyorg for today ]\n`,
     'color:green',
   )
+
   store.replacements.dailyorgReplacements = dailyOrgReplacementClasses
 }
 
@@ -88,6 +89,7 @@ function getTodaysTeacherReplacements(
 
     enrolments.get(replacementTeacher)?.add(replacmentClass)
   }
+
   return enrolments
 }
 
