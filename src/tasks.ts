@@ -581,8 +581,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
     if (
       !(
         course instanceof Map &&
-        'courseState' in course &&
-        course.courseState === 'string'
+        'courseState' in course
       )
     ) throw 'error with store.remote.course properties'
 
@@ -635,15 +634,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
     const course = store.remote.courses.get(id)
 
-    if (
-      !(
-        course instanceof Map &&
-        'name' in course && typeof course.name === 'string' &&
-        'section' in course && typeof course.section === 'string' &&
-        'description' in course && typeof course.description === 'string' &&
-        'descriptionHeading' in course && typeof course.descriptionHeading === 'string'
-      )
-    ) throw 'Error - invalid store.remote.course properties'
+    if (!course) continue
 
     const props = {
       updateMask: 'name,section,description,descriptionHeading,courseState',
