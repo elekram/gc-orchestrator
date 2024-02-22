@@ -60,7 +60,7 @@ export type TimetabledCourse = {
 export function addSubjectCourseTasksToStore(store: Store) {
   /*
     Subject course with teachers and students
-    from all the subjects classes enrolled
+    from all the subject classes enrolled
   */
   const alreadyProcessedSubjects = new Set<string>()
 
@@ -333,9 +333,13 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
     const students = tc.students
     for (const remoteCourse of remoteCourseEnrolments) {
       if (remoteCourse && remoteCourse.courseId === courseId) {
+        if (!Array.isArray(remoteCourse.students)) {
+          throw 'remoteCourse.students is not an array'
+        }
+
         const diffedStudents = diffArrays(
           students,
-          remoteCourse.students as string[],
+          remoteCourse.students,
         )
 
         const studentsToAdd = diffedStudents.arr1Diff
@@ -347,11 +351,11 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
           store.tasks.enrolmentTasks.push({
             type: CourseEnrolmentType.Students,
             action: EnrolmentTask.Add,
-            courseId: remoteCourse.courseId as string,
+            courseId: remoteCourse.courseId,
             user: {
               userId: student,
             },
-          } as googleClassroom.CourseMemberProps)
+          })
         }
 
         const studentsToRemove = diffedStudents.arr2Diff
@@ -359,11 +363,11 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
           store.tasks.enrolmentTasks.push({
             type: CourseEnrolmentType.Students,
             action: EnrolmentTask.Remove,
-            courseId: remoteCourse.courseId as string,
+            courseId: remoteCourse.courseId,
             user: {
               userId: student,
             },
-          } as googleClassroom.CourseMemberProps)
+          })
         }
       }
     }
@@ -380,6 +384,8 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
 
     const courseAlias =
       `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
+
+    if (!store.remote.courseAliases.has(courseAlias)) continue
 
     dailyorgEnrolments.push({
       courseAlias,
@@ -426,7 +432,7 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
         user: {
           userId: teacher,
         },
-      } as googleClassroom.CourseMemberProps)
+      })
     }
   }
 }
@@ -491,12 +497,22 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
       continue
     }
 
-    const teachers: string[] = tc.subjectTeachers as string[]
+    if (!Array.isArray(tc.subjectTeachers)) throw 'tc.subjectTeachers is not an Array'
+
+    const teachers: string[] = tc.subjectTeachers
     for (const remoteCourse of remoteCourseEnrolments) {
       if (remoteCourse && remoteCourse.courseId === courseId) {
+        if (!Array.isArray(remoteCourse.teachers)) {
+          throw 'remoteCourse.teachers is not an Array'
+        }
+
+        if (typeof remoteCourse.courseId !== 'string') {
+          throw 'remoteCourse.courseId is not of string type'
+        }
+
         const diffedTeachers = diffArrays(
           teachers,
-          remoteCourse.teachers as string[],
+          remoteCourse.teachers,
         )
 
         const teachersToAdd = diffedTeachers.arr1Diff
@@ -508,11 +524,11 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
           store.tasks.enrolmentTasks.push({
             type: CourseEnrolmentType.Teachers,
             action: EnrolmentTask.Add,
-            courseId: remoteCourse.courseId as string,
+            courseId: remoteCourse.courseId,
             user: {
               userId: teacher,
             },
-          } as googleClassroom.CourseMemberProps)
+          })
         }
 
         const teachersToRemove = diffedTeachers.arr2Diff
@@ -536,67 +552,12 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
             store.tasks.enrolmentTasks.push({
               type: CourseEnrolmentType.Teachers,
               action: EnrolmentTask.Remove,
-              courseId: remoteCourse.courseId as string,
+              courseId: remoteCourse.courseId,
               user: {
                 userId: teacher,
               },
-            } as googleClassroom.CourseMemberProps)
+            })
           }
-        }
-      }
-    }
-  }
-}
-
-export async function addReplacementEnrolmentTasksToStore(store: Store) {
-  const auth = store.auth
-  const replacementCourses: TimetabledCourse[] = store.replacements.individualReplacements
-
-  const remoteCourseEnrolments = await Promise.all(
-    replacementCourses.map(async (course, index) => {
-      const courseId = course.courseAlias
-
-      return await googleClassroom.listCourseMembers(
-        auth,
-        'teachers',
-        courseId,
-        index,
-        replacementCourses.length,
-      )
-    }),
-  )
-
-  for (const replacementCourse of replacementCourses) {
-    if (!('teachers' in replacementCourse)) {
-      continue
-    }
-
-    const courseId = replacementCourse.courseAlias
-    const teachers = replacementCourse.teachers
-
-    // if (!remoteCourseEnrolments.length) continue
-
-    for (const remoteCourse of remoteCourseEnrolments) {
-      if (remoteCourse && remoteCourse.courseId === courseId) {
-        const diffedTeachers = diffArrays(
-          teachers,
-          remoteCourse.teachers as string[],
-        )
-
-        const teachersToAdd = diffedTeachers.arr1Diff
-        for (const teacher of teachersToAdd) {
-          if (!store.remote.activeUsers.has(teacher)) {
-            continue
-          }
-
-          store.tasks.enrolmentTasks.push({
-            type: 'teachers',
-            action: EnrolmentTask.Add,
-            courseId: remoteCourse.courseId as string,
-            user: {
-              userId: teacher,
-            },
-          } as googleClassroom.CourseMemberProps)
         }
       }
     }
@@ -615,10 +576,15 @@ export async function addCourseArchiveTasksToStore(store: Store) {
       continue
     }
 
-    const course = store.remote.courses.get(id) as {
-      name: string
-      courseState: string
-    }
+    const course = store.remote.courses.get(id)
+
+    if (
+      !(
+        course instanceof Map &&
+        'courseState' in course &&
+        course.courseState === 'string'
+      )
+    ) throw 'error with store.remote.course properties'
 
     if (course.courseState.toLowerCase() === 'active') {
       remoteCourseArchiveCandidates.add(courseAlias)
@@ -667,12 +633,17 @@ export async function addCourseArchiveTasksToStore(store: Store) {
       throw 'addCourseArchiveTasksToStore(): Id Not found'
     }
 
-    const course = store.remote.courses.get(id) as {
-      name: string
-      section: string
-      descriptionHeading: string
-      description: string
-    }
+    const course = store.remote.courses.get(id)
+
+    if (
+      !(
+        course instanceof Map &&
+        'name' in course && typeof course.name === 'string' &&
+        'section' in course && typeof course.section === 'string' &&
+        'description' in course && typeof course.description === 'string' &&
+        'descriptionHeading' in course && typeof course.descriptionHeading === 'string'
+      )
+    ) throw 'Error - invalid store.remote.course properties'
 
     const props = {
       updateMask: 'name,section,description,descriptionHeading,courseState',
@@ -749,7 +720,7 @@ export function getEnrolments(
     teachers: string[]
   }[] = []
 
-  const uniqueTimetabledCourses = new Set()
+  const uniqueTimetabledCourses = new Set<string>()
 
   for (const [code, c] of timetable) {
     let courseAlias = ''
@@ -775,22 +746,21 @@ export function getEnrolments(
 
     if (!courseAlias) throw 'Error: getEnrolments() - courseCode undefined'
 
-    const courseEnrollments = Array.from(c[timetableGrouping])
+    if (!store.remote.courseAliases.has(courseAlias)) continue
 
+    const courseEnrollments = Array.from(c[timetableGrouping])
     const remoteMemberType = remoteEnrolmentTypes.get(timetableGrouping)
 
     if (!remoteMemberType) throw 'Member type undefined'
 
-    if (store.remote.courseAliases.has(courseAlias)) {
-      uniqueTimetabledCourses.add(JSON.stringify({
-        courseAlias,
-        [remoteMemberType]: courseEnrollments,
-      }))
-    }
+    uniqueTimetabledCourses.add(JSON.stringify({
+      courseAlias,
+      [remoteMemberType]: courseEnrollments,
+    }))
   }
 
   for (const uniqueCourse of uniqueTimetabledCourses) {
-    const parsedCourse = JSON.parse(uniqueCourse as string)
+    const parsedCourse = JSON.parse(uniqueCourse)
     timetabledCourses.push(parsedCourse)
   }
 

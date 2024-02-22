@@ -9,7 +9,6 @@ import { addUsersToStore } from './src/users.ts'
 import * as tasks from './src/tasks.ts'
 import * as googleClassroom from './src/google-actions.ts'
 import { logTasks } from './src/log-tasks.ts'
-import { replaceTeacher } from './src/replace-teacher.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
 import { parse } from 'std/csv/mod.ts'
@@ -118,19 +117,6 @@ if (args.has('--VIEW-COMPOSITES'.toLowerCase())) {
     console.log(c)
     console.log('\n')
   }
-  Deno.exit()
-}
-
-if (args.has('--REPLACE-TEACHER'.toLowerCase())) {
-  await addUsersToStore(store)
-  await addCoursesToStore(store)
-  await addCourseAliasMapToStore(store)
-
-  replaceTeacher(store, 'sam@cheltsec.vic.edu.au', 'whe@cheltsec.vic.edu.au')
-  console.log(store.replacements.individualReplacements)
-  Deno.exit()
-  await tasks.addReplacementEnrolmentTasksToStore(store)
-  console.log(store.tasks.enrolmentTasks)
   Deno.exit()
 }
 
