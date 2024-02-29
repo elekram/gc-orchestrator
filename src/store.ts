@@ -3,6 +3,7 @@ import { Class, CompositeClass } from './subjects-and-classes.ts'
 import { CourseTask } from './tasks.ts'
 import { CourseMemberProps } from './google-actions.ts'
 import { TimetabledCourse } from './tasks.ts'
+import { Course } from './google-actions.ts'
 
 export interface Store {
   auth: GoogleAuth
@@ -18,7 +19,7 @@ export interface Store {
     }>
   }
   remote: {
-    courses: Map<string, unknown>
+    courses: Map<string, Course>
     courseAliases: Map<string, string>
     courseIds: Map<string, string>
     activeUsers: Set<string>
@@ -49,7 +50,7 @@ export const store: Store = {
     dailyorgReplacements: new Map(),
   },
   remote: {
-    courses: new Map(),
+    courses: new Map<string, Course>(),
     courseAliases: new Map(),
     courseIds: new Map(),
     activeUsers: new Set(),

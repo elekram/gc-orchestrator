@@ -30,12 +30,6 @@ export interface CompositeClass {
   students: Set<string>
 }
 
-// export interface Enrolments {
-//   subjectTeachers: Set<string>
-//   students: Set<string>
-//   subjectStudents: Set<string>
-// }
-
 const gooogleDomain = String(appSettings.domain)
 const csvFileLocation = appSettings.csvFileLocation
 const classNamesCsvFile = appSettings.classNamesCsv

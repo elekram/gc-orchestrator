@@ -578,13 +578,6 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
     const course = store.remote.courses.get(id)
 
-    // if (
-    //   !(
-    //     course instanceof Map &&
-    //     'courseState' in course
-    //   )
-    // ) throw 'error with store.remote.course properties'
-
     if (!course) continue
 
     if (course.courseState.toLowerCase() === 'active') {

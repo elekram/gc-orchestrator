@@ -1,4 +1,4 @@
-import { Store, store } from './store.ts'
+import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
 
 export async function listCourses(store: Store, user: string) {

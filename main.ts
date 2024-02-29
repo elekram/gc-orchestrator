@@ -46,7 +46,7 @@ if (args.has('--STAGING'.toLowerCase())) {
 
 if (args.has('--DELETE-COURSE'.toLowerCase())) {
   console.log("\n\n\nPlease enter the course alias - example '2023-ENG07A'")
-  const input = prompt('\nAlias:')
+  const input = prompt('\nAlias or Id:')
 
   if (typeof input === 'string') {
     const alias = input

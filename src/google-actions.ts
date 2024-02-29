@@ -32,7 +32,7 @@ export async function listCourseMembers(
   do {
     if (subtask) {
       console.log(
-        `%c$Fetching additional ${type} for course ${courseId}.`,
+        `%cFetching additional ${type} for course ${courseId}.`,
         'color:lightblue',
       )
     }
@@ -57,9 +57,21 @@ export async function listCourseMembers(
       }
 
       if (data.responseJson[type]) {
-        data.responseJson[type].forEach((member: Record<string, unknown>) => {
-          const memberProfile = member.profile as Record<string, string>
-          members.push(memberProfile.emailAddress)
+        data.responseJson[type].forEach((member: {
+          profile: {
+            id: string
+            name: {
+              givenName: string
+              familyName: string
+              fullName: string
+            }
+            emailAddress: string
+          }
+        }) => {
+          if (!('emailAddress' in member.profile)) {
+            throw Error('listCourseMembers() emailAddress property missing from member')
+          }
+          members.push(member.profile.emailAddress)
         })
       }
 
@@ -77,11 +89,22 @@ export async function listCourseMembers(
   }
 }
 
+export interface Course {
+  id: string
+  name: string
+  section: string
+  description: string
+  descriptionHeading: string
+  courseState: string
+  ownerId: string
+  creationTime: string
+}
+
 export async function listCourses(
   auth: GoogleAuth,
   type: 'teacherId' | 'studentId',
   userId: string,
-) {
+): Promise<Course[]> {
   if (!userId) {
     throw 'No User Id'
   }
@@ -90,7 +113,7 @@ export async function listCourses(
   const id = `${type}=${encodeURIComponent(userId.toLowerCase())}`
   const pageSize = `pageSize=${appSettings.defaultPageSize}`
 
-  const courses: Record<string, unknown>[] = []
+  const courses: Course[] = []
 
   let nextPageToken = ''
   let courseCount = 0
@@ -112,8 +135,9 @@ export async function listCourses(
     )
 
     const data = await processResponse(response)
+    const responseJson = data.responseJson.courses
 
-    Array.prototype.push.apply(courses, data.responseJson.courses)
+    Array.prototype.push.apply(courses, responseJson)
 
     courseCount = courseCount + data.responseJson.courses.length
     console.log(`%c[ ...${courseCount} courses ]`, 'color:lightblue')
@@ -324,19 +348,17 @@ export async function editCourseMembers(
   }
 }
 
-interface Course {
-  id: string
-  name: string
-  section: string
-  description: string
-  descriptionHeading: string
-  courseState: string
-  ownerId: string
-}
-
 export interface CourseProps {
   updateMask: string | undefined // 'name,section,description,descriptionHeading,room,courseState, ownerId'
-  requestBody: Course
+  requestBody: {
+    id: string
+    name: string
+    section: string
+    description: string
+    descriptionHeading: string
+    courseState: string
+    ownerId: string
+  }
 }
 
 export async function createCourse(
@@ -426,7 +448,11 @@ export async function deleteCourse(
 ) {
   index = index + 1
 
-  const id = encodeURIComponent(`d:${courseId}`)
+  let id = `${encodeURIComponent(courseId)}`
+  if (isNaN(Number(courseId))) {
+    id = `d:${encodeURIComponent(courseId)}`
+  }
+
   const path = 'https://classroom.googleapis.com/v1/courses'
 
   const delay = index * appSettings.taskDelay
