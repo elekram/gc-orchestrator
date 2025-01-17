@@ -2,6 +2,7 @@ import { parse } from 'std/csv/mod.ts'
 import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
 import { tinyLogger } from './deps.ts'
+import { format } from 'std/datetime/format.ts'
 
 export interface Class {
   subjectCode: string
@@ -61,12 +62,15 @@ const unscheduledDuties = parse(
 )
 
 export function addTimetableToStore(store: Store) {
-  const compositeClassCodes = getCompositeClasses(classExceptions).classCodes()
+  // const compositeClassCodes = getCompositeClasses(classExceptions).classCodes()
 
   const timetable = getSubjectsAndClasses(
-    compositeClassCodes,
+    // compositeClassCodes,
     subjectExceptions,
   )
+
+  console.log(timetable)
+  return
 
   store.timetable.subjects = timetable.subjects
   store.timetable.classes = timetable.classes
@@ -132,17 +136,17 @@ function getCompositeClasses(classExceptions: string[]) {
         return c['Class Code'] === classCode
       })
 
-      if (c[0]['Subject Code']) {
-        subjectCode = c[0]['Subject Code']
+      if (c[0]['Course Code']) {
+        subjectCode = c[0]['Course Code']
       }
 
       if (c[0]['Faculty Name']) {
         domain = c[0]['Faculty Name'].split('_')[0].toUpperCase()
       }
 
-      if (c[0]['Subject Name']) {
+      if (c[0]['Course Name']) {
         subjectNames.add(
-          c[0]['Subject Name'].replace(/['"]+/g, ''),
+          c[0]['Course Name'].replace(/['"]+/g, ''),
         )
       }
 
@@ -204,27 +208,41 @@ function getCompositeClasses(classExceptions: string[]) {
 }
 
 export function getSubjectsAndClasses(
-  compositeClassCodes: Set<string>,
+  // compositeClassCodes: Set<string>,
   subjectExceptions: string[],
 ) {
   const classes: Map<string, Class> = new Map()
   const subjects = new Set<string>()
   for (const row of classNames) {
-    const subjectCodeWithSemeterPrefix = row['Subject Code'] as string
+    const subjectCodeWithSemeterPrefix = row['Course Code'] as string
     const classCodeWithSemeterPrefix = row['Class Code'] as string
 
-    if (!isValidCode(subjectCodeWithSemeterPrefix)) {
+    // if (!isValidCode(subjectCodeWithSemeterPrefix)) {
+    //   continue
+    // }
+
+    // if (!isValidCode(classCodeWithSemeterPrefix)) {
+    //   continue
+    // }
+
+    // const subjectCode = (row['Subject Code'] as string).substring(1)
+    // const classCode = (row['Class Code'] as string).substring(1)
+    const subjectCode = subjectCodeWithSemeterPrefix
+    if (subjectCode === "" || subjectCode == "-") {
+      continue
+    }
+    const classCode = classCodeWithSemeterPrefix
+    if (classCode === "" || classCode == "-") {
       continue
     }
 
-    if (!isValidCode(classCodeWithSemeterPrefix)) {
+    const name = (row['Course Name'] as string).replace(/['"]+/g, '')
+
+    if (name === "" || name === "-") {
       continue
     }
 
-    const subjectCode = (row['Subject Code'] as string).substring(1)
-    const classCode = (row['Class Code'] as string).substring(1)
-    const name = (row['Subject Name'] as string).replace(/['"]+/g, '')
-    const domain = (row['Faculty Name'] as string).split('_')[0].toUpperCase()
+    const domain = (row['Faculty Name'] as string).split('-')[0].toUpperCase().trim()
     const leaders = getLeaders(domain)
     const subjectTeachers = getSubjectTeachers(
       subjectCodeWithSemeterPrefix,
@@ -245,10 +263,10 @@ export function getSubjectsAndClasses(
       isExceptedSubject = true
     }
 
-    let isComposite = false
-    if (compositeClassCodes.has(classCode)) {
-      isComposite = true
-    }
+    // let isComposite = false
+    // if (compositeClassCodes.has(classCode)) {
+    //   isComposite = true
+    // }
 
     const c: Class = {
       subjectCode,
@@ -261,7 +279,7 @@ export function getSubjectsAndClasses(
       subjectStudents: new Set<string>(subjectStudents),
       students: new Set<string>(students),
       periodSchedule,
-      isComposite,
+      isComposite: false,
       isExceptedSubject,
     }
 
@@ -310,14 +328,14 @@ function getLeaders(domain: string): Set<string> | undefined {
   const domains: Map<string, Set<string>> = new Map()
 
   for (const row of unscheduledDuties) {
-    const hasDomainLeaderRow: boolean = (row['Duty Name'] as string).includes(
-      'Google Domain Leader',
+    const hasDomainLeaderRow: boolean = (row['Responsibility'] as string).includes(
+      'Domain Leader',
     )
 
     if (hasDomainLeaderRow) {
-      const domainName = (row['Duty Name'] as string).split('_')[1]
-        .toUpperCase()
-      const domainLeader = (row['Teacher Code'] as string).toLowerCase()
+      const domainName = (row['Responsibility'] as string).split('-')[1]
+        .toUpperCase().trim()
+      const domainLeader = (row['Code'] as string).toLowerCase()
       const username = domainLeader + gooogleDomain
 
       if (!domains.has(domainName)) {
@@ -333,7 +351,7 @@ function getStudents(classCode: string): Set<string> {
   const students = new Set<string>()
 
   for (const row of studentLessons) {
-    if (row['Class Code'] === classCode) {
+    if (row['Class Name'] === classCode) {
       const student = row['Student Code'] as string
 
       if (student) {
@@ -349,7 +367,7 @@ function getSubjectStudents(subjectCode: string): Set<string> {
   const subjectStudents = new Set<string>()
 
   for (const row of classNames) {
-    if (row['Subject Code'] === subjectCode) {
+    if (row['Course Code'] === subjectCode) {
       if (!row['Class Code']) continue
       const students = getStudents(row['Class Code'])
 
