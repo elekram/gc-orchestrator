@@ -209,7 +209,7 @@ async function transferCourseOwenership() {
 
 async function addTasksToStore(store: Store) {
   if (appSettings.runCourseTasks) {
-    await tasks.addTeacherCourseTasksToStore(store)
+    // await tasks.addTeacherCourseTasksToStore(store)
     await tasks.addClassCourseTasksToStore(store)
     await tasks.addCompositeClassCourseTasksToStore(store)
     await tasks.addSubjectCourseTasksToStore(store)

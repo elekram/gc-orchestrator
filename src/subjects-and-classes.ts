@@ -62,15 +62,14 @@ const unscheduledDuties = parse(
 )
 
 export function addTimetableToStore(store: Store) {
-  // const compositeClassCodes = getCompositeClasses(classExceptions).classCodes()
+  const compositeClassCodes = getCompositeClasses(classExceptions).classCodes()
 
   const timetable = getSubjectsAndClasses(
-    // compositeClassCodes,
+    compositeClassCodes,
     subjectExceptions,
   )
 
-  console.log(timetable)
-  return
+  // console.log(timetable)
 
   store.timetable.subjects = timetable.subjects
   store.timetable.classes = timetable.classes
@@ -98,16 +97,46 @@ function getCompositeClasses(classExceptions: string[]) {
   const compositeClassCodes: Set<string> = new Set()
 
   for (const row of timetable) {
-    const schedule = `D${row['Day No']}P${row['Period No']}${row['Teacher Code']}`
+    if (!row['Day Number'] || row['Day Number'] === "" || row['Day Number'] === "-") {
+      continue
+    }
 
-    if (!row['Class Code']) continue
+    if (!row['Period Code'] || row['Period Code'] === "" || row['Period Code'] === "-") {
+      continue
+    }
+
+    if (!row['Teacher Code'] || row['Teacher Code'] === "" || row['Teacher Code'] === "-") {
+      continue
+    }
+
+    if (!row['Class Code'] || row['Class Code'] === "" || row['Class Code'] === "-") {
+      continue
+    }
+
+    const schedule = `D${row['Day Number']}P${row['Period Code']}${row['Teacher Code']}`
+
     if (classExceptions.includes(row['Class Code'])) continue
 
     const classes: Set<string> = new Set()
-    classes.add(row['Class Code'])
+
+
+    const childCourseExceptions = ["7ENG", "7MTH", "7MUS", "8ENG"]
+    let isException = false
+    for (const codeException of childCourseExceptions) {
+      if (row['Class Code'].includes(codeException)) {
+        isException = true
+      }
+    }
+
+    let cCode = row['Class Code']
+    if (isException) {
+      cCode = cCode.substring(0, cCode.length - 1)
+    }
+
+    classes.add(cCode)
 
     if (teacherSchedules.has(schedule)) {
-      teacherSchedules.get(schedule)?.add(row['Class Code'])
+      teacherSchedules.get(schedule)?.add(cCode)
       continue
     }
 
@@ -119,7 +148,34 @@ function getCompositeClasses(classExceptions: string[]) {
   for (const classes of teacherSchedules) {
     if (classes[1].size < 2) continue
 
-    const sortedClassCodes = [...(classes[1])].sort()
+    const sanitisedClasses: string[] = []
+    for (const c of classes[1]) {
+      const yearLevel = c.substring(0, 2)
+
+      if (isNumeric(yearLevel)) {
+        sanitisedClasses.push(c)
+      }
+
+      if (!isNumeric(yearLevel)) {
+        sanitisedClasses.push("0" + c)
+      }
+    }
+
+    const preSortedClassCodes = [...(sanitisedClasses)].sort()
+    const sortedClassCodes: string[] = []
+
+    for (const c of preSortedClassCodes) {
+      if (c.substring(0, 2) === "01") {
+        sortedClassCodes.push(c)
+        continue
+      }
+      if (c.substring(0, 1) == "0") {
+        sortedClassCodes.push(c.substring(1))
+        continue
+      }
+
+      sortedClassCodes.push(c)
+    }
 
     let compositeClassName = ''
     let subjectCode = ''
@@ -135,13 +191,18 @@ function getCompositeClasses(classExceptions: string[]) {
       const c = classNames.filter((c) => {
         return c['Class Code'] === classCode
       })
+      // console.log(classCode)
+      // console.log(c)
+      if (!c[0]) {
+        continue
+      }
 
       if (c[0]['Course Code']) {
         subjectCode = c[0]['Course Code']
       }
 
       if (c[0]['Faculty Name']) {
-        domain = c[0]['Faculty Name'].split('_')[0].toUpperCase()
+        domain = c[0]['Faculty Name'].split('-')[0].toUpperCase()
       }
 
       if (c[0]['Course Name']) {
@@ -150,21 +211,21 @@ function getCompositeClasses(classExceptions: string[]) {
         )
       }
 
-      if (!isValidCode(subjectCode)) {
-        continue
-      }
+      // if (!isValidCode(subjectCode)) {
+      //   continue
+      // }
 
-      if (!isValidCode(classCode)) {
-        continue
-      }
+      // if (!isValidCode(classCode)) {
+      //   continue
+      // }
 
       if (!classExceptions.includes(classCode)) {
         compositeClassCodes.add(classCode.substring(1))
       }
 
-      classCodes.add(classCode.substring(1))
+      classCodes.add(classCode)
       classCodesWithSemeterPrefix.add(classCode)
-      compositeClassName += `${classCode.substring(1)}-`
+      compositeClassName += `${classCode}-`
 
       const leaders = getLeaders(domain)
       const teachersFromSubjectCode = getSubjectTeachers(
@@ -207,15 +268,34 @@ function getCompositeClasses(classExceptions: string[]) {
   }
 }
 
+function isNumeric(str: string) {
+  if (typeof str != "string") return false // we only process strings!  
+  return !isNaN(Number(str)) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+    !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+}
+
 export function getSubjectsAndClasses(
-  // compositeClassCodes: Set<string>,
+  compositeClassCodes: Set<string>,
   subjectExceptions: string[],
 ) {
   const classes: Map<string, Class> = new Map()
   const subjects = new Set<string>()
+  // const childCourseExceptions = ["7ENG", "7MTH", "7MUS", "8ENG"]
   for (const row of classNames) {
+    // let _exceptionMatch = false
+    // for (const exceptedCourse of childCourseExceptions) {
+    //   if (row['Course Code']?.includes(exceptedCourse)) {
+    //     _exceptionMatch = true
+    //   }
+    // }
     const subjectCodeWithSemeterPrefix = row['Course Code'] as string
     const classCodeWithSemeterPrefix = row['Class Code'] as string
+
+    // if (exceptionMatch) {
+    //   console.log(subjectCodeWithSemeterPrefix)
+    //   subjectCodeWithSemeterPrefix = subjectCodeWithSemeterPrefix.substring(0, subjectCodeWithSemeterPrefix.length - 1)
+    //   console.log(subjectCodeWithSemeterPrefix)
+    // }
 
     // if (!isValidCode(subjectCodeWithSemeterPrefix)) {
     //   continue
@@ -228,17 +308,17 @@ export function getSubjectsAndClasses(
     // const subjectCode = (row['Subject Code'] as string).substring(1)
     // const classCode = (row['Class Code'] as string).substring(1)
     const subjectCode = subjectCodeWithSemeterPrefix
-    if (subjectCode === "" || subjectCode == "-") {
+    if (!subjectCode || subjectCode === "" || subjectCode == "-") {
       continue
     }
     const classCode = classCodeWithSemeterPrefix
-    if (classCode === "" || classCode == "-") {
+    if (!classCode || classCode === "" || classCode == "-") {
       continue
     }
 
     const name = (row['Course Name'] as string).replace(/['"]+/g, '')
 
-    if (name === "" || name === "-") {
+    if (!name || name === "" || name === "-") {
       continue
     }
 
@@ -263,10 +343,10 @@ export function getSubjectsAndClasses(
       isExceptedSubject = true
     }
 
-    // let isComposite = false
-    // if (compositeClassCodes.has(classCode)) {
-    //   isComposite = true
-    // }
+    let isComposite = false
+    if (compositeClassCodes.has(classCode)) {
+      isComposite = true
+    }
 
     const c: Class = {
       subjectCode,
@@ -279,7 +359,7 @@ export function getSubjectsAndClasses(
       subjectStudents: new Set<string>(subjectStudents),
       students: new Set<string>(students),
       periodSchedule,
-      isComposite: false,
+      isComposite: isComposite,
       isExceptedSubject,
     }
 
@@ -296,6 +376,10 @@ function getClassTeachers(classCodeWithSemeterPrefix: string) {
     if (row['Class Code'] == classCodeWithSemeterPrefix) {
       if (!row['Teacher Code']) continue
 
+      if (row['Teacher Code'] === "" || row['Teacher Code'] === "-") {
+        continue
+      }
+
       classTeachers.add(
         `${row['Teacher Code'].toLowerCase()}${appSettings.domain}`,
       )
@@ -310,8 +394,8 @@ function getPeriodSchedule(classCode: string) {
   for (const row of timetable) {
     if (row['Class Code'] !== classCode) continue
 
-    const dayNumber = Number(row['Day No'])
-    const periodNumber = Number(row['Period No'])
+    const dayNumber = Number(row['Day Number'])
+    const periodNumber = Number(row['Period Code'])
 
     if (periodSchedule.has(dayNumber)) {
       periodSchedule.get(dayNumber)?.add(periodNumber)
@@ -336,6 +420,9 @@ function getLeaders(domain: string): Set<string> | undefined {
       const domainName = (row['Responsibility'] as string).split('-')[1]
         .toUpperCase().trim()
       const domainLeader = (row['Code'] as string).toLowerCase()
+      if (domainLeader == "" || domainLeader == "-") {
+        continue
+      }
       const username = domainLeader + gooogleDomain
 
       if (!domains.has(domainName)) {
@@ -355,6 +442,9 @@ function getStudents(classCode: string): Set<string> {
       const student = row['Student Code'] as string
 
       if (student) {
+        if (student === "" || student === "-") {
+          continue
+        }
         const username = student + gooogleDomain
         students.add(username.toLowerCase())
       }
@@ -392,6 +482,10 @@ function getSubjectTeachers(
     if (classCode.includes(code)) {
       const teacher = row['Teacher Code'] as string
       if (teacher) {
+        if (teacher === "" || teacher === "-") {
+          continue
+        }
+
         teachers.add(teacher.toLowerCase() + gooogleDomain)
       }
     }

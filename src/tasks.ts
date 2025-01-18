@@ -34,9 +34,9 @@ enum EnrolmentTask {
 
 export interface CourseTask {
   type:
-    | 'create'
-    | 'update'
-    | 'archive'
+  | 'create'
+  | 'update'
+  | 'archive'
   props: {
     updateMask: string
     requestBody: {
@@ -74,7 +74,16 @@ export function addSubjectCourseTasksToStore(store: Store) {
     if (c.isExceptedSubject) continue
     if (!subjectsCourseMap.has(c.domain)) continue
 
-    const classYearLevel = subjectCode.slice(-2)
+    let classYearLevel = ""
+    const potentialYearLevel = subjectCode.substring(0, 2)
+    if (isNumeric(potentialYearLevel)) {
+      classYearLevel = potentialYearLevel
+    }
+
+    if (!isNumeric(potentialYearLevel)) {
+      classYearLevel = subjectCode.substring(0, 1)
+    }
+    // const classYearLevel = subjectCode.slice(-2)
 
     if (!isNumeric(classYearLevel)) {
       throw `Year level in subject code failed check ${subjectCode}`
@@ -595,7 +604,16 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
     remoteCourseArchiveCandidates.delete(currentTimetabledClass)
 
-    const classYearLevel = subjectCode.slice(-2)
+    // const classYearLevel = subjectCode.slice(-2)
+    let classYearLevel = ""
+    const potentialYearLevel = subjectCode.substring(0, 2)
+    if (isNumeric(potentialYearLevel)) {
+      classYearLevel = potentialYearLevel
+    }
+
+    if (!isNumeric(potentialYearLevel)) {
+      classYearLevel = subjectCode.substring(0, 1)
+    }
 
     if (!isNumeric(classYearLevel)) {
       throw `Year level in subject code failed check ${subjectCode}`
@@ -761,30 +779,67 @@ function getCurrentAcademicYearSet() {
   return releventYears
 }
 
+// function isNumeric(str: string) {
+//   if (typeof str != "string") return false // we only process strings!  
+//   return !isNaN(Number(str)) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+//     !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+// }
+
 export function getAcademicYearForClasscode(classCode: string) {
-  const decimalChars = /\d+/g
-  const matchedDecimalsArray = [...classCode.matchAll(decimalChars)]
+  let releventYear = ""
+  const potentialYearLevel = classCode.substring(0, 2)
 
-  const decimalsArray = matchedDecimalsArray.flat()
-  let releventYear = ''
-
-  if (decimalsArray.length === 1) {
-    const yearLevel = decimalsArray[0].slice(0, 2)
-    const year = appSettings.academicYearMap.get(yearLevel)
+  if (isNumeric(potentialYearLevel)) {
+    const year = appSettings.academicYearMap.get(potentialYearLevel)
 
     if (typeof year === 'string') {
       releventYear = year
     }
+
+    if (!releventYear) {
+      throw `Error: getAcademicYearForClasscode(classCode: ${classCode}) -> Year level code undefined`
+    }
+
+    return releventYear
   }
 
-  if (decimalsArray.length > 1) {
-    const yearLevel = decimalsArray[decimalsArray.length - 1].slice(0, 2)
-    const year = appSettings.academicYearMap.get(yearLevel)
+  if (!isNumeric(potentialYearLevel)) {
+    const year = appSettings.academicYearMap.get(classCode.substring(0, 1))
 
     if (typeof year === 'string') {
       releventYear = year
     }
+
+    if (!releventYear) {
+      throw `Error: getAcademicYearForClasscode(classCode: ${classCode}) -> Year level code undefined`
+    }
+
+    return releventYear
   }
+
+  // const decimalChars = /\d+/g
+  // const matchedDecimalsArray = [...classCode.matchAll(decimalChars)]
+
+  // const decimalsArray = matchedDecimalsArray.flat()
+  // let releventYear = ''
+
+  // if (decimalsArray.length === 1) {
+  //   const yearLevel = decimalsArray[0].slice(0, 2)
+  //   const year = appSettings.academicYearMap.get(yearLevel)
+
+  //   if (typeof year === 'string') {
+  //     releventYear = year
+  //   }
+  // }
+
+  // if (decimalsArray.length > 1) {
+  //   const yearLevel = decimalsArray[decimalsArray.length - 1].slice(0, 2)
+  //   const year = appSettings.academicYearMap.get(yearLevel)
+
+  //   if (typeof year === 'string') {
+  //     releventYear = year
+  //   }
+  // }
 
   if (!releventYear) {
     throw `Error: getAcademicYearForClasscode(classCode: ${classCode}) -> Year level code undefined`
