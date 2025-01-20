@@ -20,12 +20,12 @@ export function addDailyOrgReplacementsToStore(
 
   for (const [teacher, classes] of replacementTeacherSchedule) {
     for (const c of classes) {
-      const classCodeWithoutSemesterPrefix = c.substring(1)
+      const classcode = c
 
-      let code = classCodeWithoutSemesterPrefix
+      let code = classcode
 
       for (const [compositeClass, props] of store.timetable.compositeClasses) {
-        if (props.classCodes.has(classCodeWithoutSemesterPrefix)) {
+        if (props.classCodes.has(classcode)) {
           code = compositeClass.split('.')[1]
         }
       }
@@ -62,29 +62,31 @@ function getTodaysTeacherReplacements(
   if (!teacherReplacements) return enrolments
 
   for (const row of teacherReplacements) {
-    const replacmentClass = row['Class Code']
+    const replacmentClass = row['Class'].trim()
+
+    if (!replacmentClass) continue
+    if (replacmentClass === "-") continue
+
     if (isExceptedSubject(store, replacmentClass)) continue
 
-    const todaysDate = new Date().setHours(0, 0, 0, 0)
     if (!row.Date) continue
 
-    const dailyOrgDate = parseDate.parse(
-      row.Date.replaceAll('/', '-'),
-      'd-MM-yyyy',
-    )
+    const todaysDate = new Date().setHours(0, 0, 0, 0)
+    const parsedDate = Date.parse(row.Date)
+    const dailyOrgDate = new Date(parsedDate)
 
     if (todaysDate !== dailyOrgDate.getTime()) continue
 
-    const replacementTeacher = `${
-      row['Replacement Teacher Code']?.toLowerCase()
-    }${appSettings.domain}`
+    if (!row['Substitute Code']) continue
+    if (row['Substitute Code'].trim() === "-") continue
 
-    if (!replacmentClass) continue
-    if (!replacementTeacher) continue
+    const replacementTeacher = `${row['Substitute Code']?.toLowerCase()
+      }${appSettings.domain}`
 
     if (!enrolments.has(replacementTeacher)) {
       enrolments.set(replacementTeacher, new Set())
       enrolments.get(replacementTeacher)?.add(replacmentClass)
+      continue
     }
 
     enrolments.get(replacementTeacher)?.add(replacmentClass)
@@ -100,7 +102,7 @@ function isExceptedSubject(store: Store, replacementClasscode: string) {
     const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
     if (
-      classCode === replacementClasscode.substring(1) &&
+      classCode === replacementClasscode &&
       appSettings.subjectExceptions.includes(subjectCode)
     ) {
       exceptedSubject = true

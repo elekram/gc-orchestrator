@@ -15,7 +15,7 @@ export function replaceTeacher(
   }
 
   if (!store.remote.activeUsers.has(teacher.toLowerCase())) {
-    console.log(`\n%cTeacher not foundor active: ${teacher}\n`, 'color:red')
+    console.log(`\n%cTeacher not found or active: ${teacher}\n`, 'color:red')
     Deno.exit()
   }
 
