@@ -236,6 +236,13 @@ export async function addTeacherCourseTasksToStore(store: Store) {
 }
 
 // deno-lint-ignore require-await
+export async function addYearLevelClassCourseTasksToStore(store: Store) {
+  for (const [code, c] of store.timetable.yearLevelClasses) {
+    const courseType = CourseType.ClassCourse
+  }
+}
+
+// deno-lint-ignore require-await
 export async function addClassCourseTasksToStore(store: Store) {
   for (const [code, c] of store.timetable.classes) {
     const _subjectCode = code.split('.')[0]

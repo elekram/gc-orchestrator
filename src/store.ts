@@ -11,6 +11,7 @@ export interface Store {
     subjects: Set<string>
     classes: Map<string, Class>
     compositeClasses: Map<string, CompositeClass>
+    yearLevelClasses: Map<string, Class>
   }
   replacements: {
     individualReplacements: TimetabledCourse[]
@@ -44,6 +45,7 @@ export const store: Store = {
     subjects: new Set<string>(),
     classes: new Map(),
     compositeClasses: new Map(),
+    yearLevelClasses: new Map(),
   },
   replacements: {
     individualReplacements: [],

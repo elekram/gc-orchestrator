@@ -62,6 +62,7 @@ const unscheduledDuties = parse(
 )
 
 export function addTimetableToStore(store: Store) {
+  const yearLevelClasses = getYearLevelClasses()
   const compositeClassCodes = getCompositeClasses(classExceptions).classCodes()
 
   const timetable = getSubjectsAndClasses(
@@ -69,12 +70,11 @@ export function addTimetableToStore(store: Store) {
     subjectExceptions,
   )
 
-  // console.log(timetable)
-
   store.timetable.subjects = timetable.subjects
   store.timetable.classes = timetable.classes
   store.timetable.compositeClasses = getCompositeClasses(classExceptions)
     .classes()
+  store.timetable.yearLevelClasses = yearLevelClasses
 
   console.log(
     `\n%c[ ${store.timetable.subjects.size} subjects added to Store from timetable ]`,
@@ -90,6 +90,54 @@ export function addTimetableToStore(store: Store) {
     `\n%c[ ${store.timetable.compositeClasses.size} composite classes added to Store from timetable ]\n`,
     'color:green',
   )
+}
+
+
+function getYearLevelClasses() {
+  const yearLevels: string[] = ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const yearLevelClasses: Map<string, Class> = new Map()
+
+
+  for (const y of yearLevels) {
+    const yearLevel = y.split(" ")[1]
+
+    const c: Class = {
+      subjectCode: yearLevel + "STUDENTS",
+      domain: "N/A",
+      name: y + " Students",
+      classCodeWithSemeterPrefix: yearLevel + "STUDENTS",
+      students: new Set<string>(),
+      subjectTeachers: new Set<string>(),
+      subjectLeaders: new Set<string>(),
+      classTeachers: new Set<string>(),
+      subjectStudents: new Set<string>(),
+      periodSchedule: new Map<number, Set<number>>(),
+      isComposite: false,
+      isExceptedSubject: false,
+    }
+    for (const row of studentLessons) {
+      if (row["Class Year Level"] !== yearLevel) continue
+      if (row["Student Code"] === "") continue
+      if (row["Student Code"] === "-") continue
+      if (!row["Student Code"]) continue
+
+      c.students.add(row["Student Code"].toLowerCase() + appSettings.domain)
+    }
+
+
+    for (const row of timetable) {
+      if (row["Curriculum"] !== yearLevel) continue
+      if (row["Teacher Code"] === "") continue
+      if (row["Teacher Code"] === "-") continue
+      if (!row["Teacher Code"]) continue
+
+      c.subjectTeachers.add(row["Teacher Code"].toLowerCase() + appSettings.domain)
+
+    }
+    yearLevelClasses.set(y, c)
+  }
+
+  return yearLevelClasses
 }
 
 function getCompositeClasses(classExceptions: string[]) {
@@ -280,14 +328,9 @@ export function getSubjectsAndClasses(
 ) {
   const classes: Map<string, Class> = new Map()
   const subjects = new Set<string>()
-  // const childCourseExceptions = ["7ENG", "7MTH", "7MUS", "8ENG"]
+
   for (const row of classNames) {
-    // let _exceptionMatch = false
-    // for (const exceptedCourse of childCourseExceptions) {
-    //   if (row['Course Code']?.includes(exceptedCourse)) {
-    //     _exceptionMatch = true
-    //   }
-    // }
+
     const subjectCodeWithSemeterPrefix = row['Course Code'] as string
     const classCodeWithSemeterPrefix = row['Class Code'] as string
 
@@ -305,8 +348,6 @@ export function getSubjectsAndClasses(
     //   continue
     // }
 
-    // const subjectCode = (row['Subject Code'] as string).substring(1)
-    // const classCode = (row['Class Code'] as string).substring(1)
     const subjectCode = subjectCodeWithSemeterPrefix
     if (!subjectCode || subjectCode === "" || subjectCode == "-") {
       continue
