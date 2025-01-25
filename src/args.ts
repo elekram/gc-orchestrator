@@ -17,6 +17,7 @@ export function processArgs(rawArgs: string[]) {
     '--transfer-course-ownership',
     '--list-courses',
     '--staging',
+    '--scratch',
   ]
 
   if (!args.length) {

@@ -13,7 +13,8 @@
     "transfer-ownership": "deno run -A --check main.ts --transfer-course-ownership",
     "list-courses": "deno run -A --check main.ts --list-courses",
     "dailyorg": "deno run -A --check main.ts --dailyorg-replacements",
-    "staging": "deno run -A --check main.ts --staging"
+    "staging": "deno run -A --check main.ts --staging",
+    "scratch": "deno run -A --check main.ts --scratch"
   },
   "fmt": {
     "semiColons": false,

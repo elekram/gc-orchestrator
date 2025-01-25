@@ -167,24 +167,10 @@ function getCompositeClasses(classExceptions: string[]) {
 
     const classes: Set<string> = new Set()
 
-
-    const childCourseExceptions = ["7ENG", "7MTH", "7MUS", "8ENG"]
-    let isException = false
-    for (const codeException of childCourseExceptions) {
-      if (row['Class Code'].includes(codeException)) {
-        isException = true
-      }
-    }
-
-    let cCode = row['Class Code']
-    if (isException) {
-      cCode = cCode.substring(0, cCode.length - 1)
-    }
-
-    classes.add(cCode)
+    classes.add(row['Class Code'])
 
     if (teacherSchedules.has(schedule)) {
-      teacherSchedules.get(schedule)?.add(cCode)
+      teacherSchedules.get(schedule)?.add(row['Class Code'])
       continue
     }
 

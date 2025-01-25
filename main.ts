@@ -44,6 +44,134 @@ if (args.has('--STAGING'.toLowerCase())) {
   Deno.exit()
 }
 
+if (args.has('--SCRATCH'.toLowerCase())) {
+  // addTimetableToStore(store)
+  // await addCoursesToStore(store)
+  // await addCourseAliasMapToStore(store)
+
+
+
+  // const oldAliasVer = 'v3'
+  // const newAliasVer = 'v4'
+
+  // const classCourse = 'CLASS_COURSE'
+  // const teacherCourse = 'TEACHER_COURSE'
+  // const subjectCourse = 'SUBJECT_COURSE'
+
+  // const newAliasesMap = new Map<string, string>()
+
+  // for (const alias of store.remote.courseAliases) {
+  //   const courseId = alias[1]
+  //   const aliasParts = alias[0].split(".")
+  //   const courseType = aliasParts[1]
+
+  //   switch (courseType) {
+  //     case classCourse: {
+  //       const newAlias = `${newAliasVer}.${aliasParts[1]}.${aliasParts[2]}.${aliasParts[3]}`
+  //       newAliasesMap.set(newAlias, courseId)
+  //       break
+  //     }
+
+  //     case teacherCourse: {
+  //       let newAlias = ''
+  //       const yearLvl = aliasParts[2].slice(-2)
+  //       const code = aliasParts[2].substring(0, aliasParts[2].length - 2)
+
+  //       if (isNumeric(yearLvl)) {
+  //         switch (yearLvl) {
+  //           case "01": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.01${code}`
+  //             break
+  //           }
+  //           case "07": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.7${code}`
+  //             break
+  //           }
+  //           case "08": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.8${code}`
+  //             break
+  //           }
+  //           case "09": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.9${code}`
+  //             break
+  //           }
+  //           case "10": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.10${code}`
+  //             break
+  //           }
+  //           case "11": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.11${code}`
+  //             break
+  //           }
+  //           case "12": {
+  //             newAlias = `${newAliasVer}.${aliasParts[1]}.12${code}`
+  //             break
+  //           }
+  //           default: {
+  //             console.log("slipped through:" + alias)
+  //             break
+  //           }
+  //         }
+  //         // console.log(alias[0])
+  //         // console.log(newAlias)
+  //         // console.log(yearLvl)
+  //       }
+  //       newAliasesMap.set(newAlias, courseId)
+  //       break
+  //     }
+
+  //     case subjectCourse: {
+  //       const newAlias = `${newAliasVer}.${aliasParts[1]}.${aliasParts[2]}.${aliasParts[3]}`
+  //       newAliasesMap.set(newAlias, courseId)
+  //       break
+  //     }
+  //   }
+  // }
+
+  // type t = {
+  //   alias: string
+  //   id: string
+  // }
+  // const tasks: t[] = []
+  // let count = 0
+  // for (const [a, id] of newAliasesMap) {
+  //   if (a === "") continue
+  //   const tsk: t = {
+  //     alias: a,
+  //     id: id
+  //   }
+  //   count++
+  //   tasks.push(tsk)
+  // }
+
+  // // for (const t of tasks) {
+  // //   console.log(t)
+  // // }
+
+  // // Deno.exit()
+
+  // const total = tasks.length
+
+  // await Promise.all(
+  //   tasks.map(async (task, index) => {
+  //     await googleClassroom.createCourseAlias(
+  //       store.auth,
+  //       task.id,
+  //       task.alias,
+  //       index,
+  //       total,
+  //     )
+  //   }),
+  // )
+
+  Deno.exit()
+}
+
+function isNumeric(value: string) {
+  return /^[0-9]+$/.test(value)
+}
+
+
 if (args.has('--DELETE-COURSE'.toLowerCase())) {
   console.log("\n\n\nPlease enter the course alias - example '2023-ENG07A'")
   const input = prompt('\nAlias or Id:')
@@ -209,7 +337,7 @@ async function transferCourseOwenership() {
 
 async function addTasksToStore(store: Store) {
   if (appSettings.runCourseTasks) {
-    // await tasks.addTeacherCourseTasksToStore(store)
+    await tasks.addTeacherCourseTasksToStore(store)
     await tasks.addClassCourseTasksToStore(store)
     await tasks.addCompositeClassCourseTasksToStore(store)
     await tasks.addSubjectCourseTasksToStore(store)

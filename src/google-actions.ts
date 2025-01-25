@@ -186,7 +186,7 @@ export async function createCourseAlias(
       `%c[ Alias ${alias} created for course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
     )
-  } catch (e) {
+  } catch (e: any) {
     const errorSource = `Error: createCourseAlias() ${courseId}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
     console.log('Script must exit if alias cannot be created')
@@ -227,7 +227,7 @@ export async function deleteCourseAlias(
       `%c[ Alias ${alias} deleted for course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
     )
-  } catch (e) {
+  } catch (e: any) {
     const errorSource = `Error: deleteCourseAlias() ${courseId} - ${alias}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
     console.log('Script must exit if alias cannot be created')
@@ -322,8 +322,7 @@ export async function editCourseMembers(
   await sleep(delay)
 
   console.log(
-    `%c${method} ${
-      type.slice(0, -1)
+    `%c${method} ${type.slice(0, -1)
     } ${member} ${verb} course ${props.courseId} - ${index} of ${total} tasks`,
     'color:lightblue',
   )
@@ -342,7 +341,7 @@ export async function editCourseMembers(
       `%c[ ${method} ${member} ${verb} ${props.courseId} - Status ${data.status} ]\n`,
       'color:green',
     )
-  } catch (e) {
+  } catch (e: any) {
     const errorSource = `Error: editCourseMembers() ${props.courseId} - ${member}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
   }
@@ -393,7 +392,7 @@ export async function createCourse(
       `%c[ Created course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
     )
-  } catch (e) {
+  } catch (e: any) {
     const errorSource = `Error: createCourse() ${courseId}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
     console.log('Script must exit if course cannot be created')
@@ -434,7 +433,7 @@ export async function updateCourse(
       `%c[ Patched course: ${courseId} - ${data.status} ]\n`,
       'color:green',
     )
-  } catch (e) {
+  } catch (e: any) {
     const errorSource = `Error: updateCourse() ${courseId}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
   }
