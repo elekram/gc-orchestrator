@@ -688,8 +688,11 @@ export async function addCourseDeletionTasksToStore(store: Store) {
   })
 
   const lowestRelevantCourseYear = Math.min(...yearValues) - 1
+  const subjectDeletionExceptions = appSettings.subjectDeletionExceptions
 
   for (const [courseAlias, _id] of store.remote.courseAliases) {
+    if (subjectDeletionExceptions.includes(courseAlias)) continue
+
     const aliasFields = courseAlias.split('.')
     const courseType = aliasFields[1]
 
