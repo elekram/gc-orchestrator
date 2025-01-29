@@ -2,7 +2,6 @@ import { parse } from 'std/csv/mod.ts'
 import appSettings from '../config/config.ts'
 import { Store } from './store.ts'
 import { tinyLogger } from './deps.ts'
-import { format } from 'std/datetime/format.ts'
 
 export interface Class {
   subjectCode: string

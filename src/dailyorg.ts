@@ -21,7 +21,6 @@ export function addDailyOrgReplacementsToStore(
   for (const [teacher, classes] of replacementTeacherSchedule) {
     for (const c of classes) {
       const classcode = c
-
       let code = classcode
 
       for (const [compositeClass, props] of store.timetable.compositeClasses) {
@@ -64,6 +63,14 @@ function getTodaysTeacherReplacements(
   for (const row of teacherReplacements) {
     const replacmentClass = row['Class'].trim()
 
+    let isClassInTimetable = false
+    for (const [code, _props] of store.timetable.classes) {
+      if (code.includes(replacmentClass)) {
+        isClassInTimetable = true
+      }
+    }
+
+    if (!isClassInTimetable) continue
     if (!replacmentClass) continue
     if (replacmentClass === "-") continue
 
