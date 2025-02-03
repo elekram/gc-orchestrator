@@ -4,6 +4,9 @@
 #log folder
 log/
 
+#cache folder
+cache/
+
 #config files folder
 config/
 

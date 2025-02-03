@@ -75,13 +75,68 @@ export async function addCoursesToStore(store: Store) {
   }
 }
 
+type CacheState = {
+  isCacheValid: boolean
+}
+
 export async function addCourseAliasMapToStore(store: Store) {
   const auth = store.auth
+  let useCache = true
   const courses = store.remote.courses
+
+  const cacheStateFile = await Deno.readTextFile(appSettings.cacheStateFile);
+  const cacheState: CacheState = JSON.parse(cacheStateFile)
+
+  const cachedCourseAliasesFile = await Deno.readTextFile(appSettings.cacheFile);
+  const cachedCourseAliases: googleClassroom.CourseAliases[] = JSON.parse(cachedCourseAliasesFile)
+
+
+  if (!cacheState.isCacheValid) {
+    useCache = false
+    console.log(
+      `\n%c[ Cache store has expired and will be updated. Fetching aliases from Google ]\n`,
+      'color:purple',
+    )
+  }
+
+  if (!appSettings.useCache) {
+    useCache = false
+    console.log(
+      `\n%c[ Cache store disabled in config ]\n`,
+      'color:purple',
+    )
+  }
+
+  if (!cachedCourseAliases.length) {
+    useCache = false
+    console.log(
+      `\n%c[ Cache store is empty. Fetching aliases from Google ]\n`,
+      'color:purple',
+    )
+  }
 
   const googleCoursesIds: string[] = []
   for (const [id, _course] of courses) {
     googleCoursesIds.push(id)
+  }
+
+  if (useCache) {
+    cachedCourseAliases.forEach((alias) => {
+      const googleCourseId = alias.id
+      alias.aliases.forEach((alias) => {
+        const courseAlias = alias
+        if (courseAlias.substring(0, 2) === appSettings.aliasVersion) {
+          store.remote.courseAliases.set(courseAlias, googleCourseId)
+          store.remote.courseIds.set(googleCourseId, courseAlias)
+        }
+      })
+    })
+
+    console.log(
+      `\n%c[ ${cachedCourseAliases.length} course aliases read from cache ]\n`,
+      'color:cyan',
+    )
+    return
   }
 
   const courseAliases = await Promise.all(
@@ -95,10 +150,19 @@ export async function addCourseAliasMapToStore(store: Store) {
     }),
   )
 
+  const newCache = JSON.stringify(courseAliases)
+  await Deno.writeTextFile(appSettings.cacheFile, newCache)
+  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: true }))
+
+  console.log(
+    `\n%c[ Cache store has been updated and will be used on the next run ]\n`,
+    'color:cyan',
+  )
+
   courseAliases.forEach((alias) => {
     const googleCourseId = alias.id
-    alias.aliases.forEach((e) => {
-      const courseAlias = e
+    alias.aliases.forEach((alias) => {
+      const courseAlias = alias
       if (courseAlias.substring(0, 2) === appSettings.aliasVersion) {
         store.remote.courseAliases.set(courseAlias, googleCourseId)
         store.remote.courseIds.set(googleCourseId, courseAlias)

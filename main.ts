@@ -45,124 +45,15 @@ if (args.has('--STAGING'.toLowerCase())) {
 }
 
 if (args.has('--SCRATCH'.toLowerCase())) {
-  // addTimetableToStore(store)
-  // await addCoursesToStore(store)
-  // await addCourseAliasMapToStore(store)
 
+  const cacheModel = [{
+    some: "data",
+    is: true
+  }]
 
+  const dataToStore = JSON.stringify(cacheModel)
 
-  // const oldAliasVer = 'v3'
-  // const newAliasVer = 'v4'
-
-  // const classCourse = 'CLASS_COURSE'
-  // const teacherCourse = 'TEACHER_COURSE'
-  // const subjectCourse = 'SUBJECT_COURSE'
-
-  // const newAliasesMap = new Map<string, string>()
-
-  // for (const alias of store.remote.courseAliases) {
-  //   const courseId = alias[1]
-  //   const aliasParts = alias[0].split(".")
-  //   const courseType = aliasParts[1]
-
-  //   switch (courseType) {
-  //     case classCourse: {
-  //       const newAlias = `${newAliasVer}.${aliasParts[1]}.${aliasParts[2]}.${aliasParts[3]}`
-  //       newAliasesMap.set(newAlias, courseId)
-  //       break
-  //     }
-
-  //     case teacherCourse: {
-  //       let newAlias = ''
-  //       const yearLvl = aliasParts[2].slice(-2)
-  //       const code = aliasParts[2].substring(0, aliasParts[2].length - 2)
-
-  //       if (isNumeric(yearLvl)) {
-  //         switch (yearLvl) {
-  //           case "01": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.01${code}`
-  //             break
-  //           }
-  //           case "07": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.7${code}`
-  //             break
-  //           }
-  //           case "08": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.8${code}`
-  //             break
-  //           }
-  //           case "09": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.9${code}`
-  //             break
-  //           }
-  //           case "10": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.10${code}`
-  //             break
-  //           }
-  //           case "11": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.11${code}`
-  //             break
-  //           }
-  //           case "12": {
-  //             newAlias = `${newAliasVer}.${aliasParts[1]}.12${code}`
-  //             break
-  //           }
-  //           default: {
-  //             console.log("slipped through:" + alias)
-  //             break
-  //           }
-  //         }
-  //         // console.log(alias[0])
-  //         // console.log(newAlias)
-  //         // console.log(yearLvl)
-  //       }
-  //       newAliasesMap.set(newAlias, courseId)
-  //       break
-  //     }
-
-  //     case subjectCourse: {
-  //       const newAlias = `${newAliasVer}.${aliasParts[1]}.${aliasParts[2]}.${aliasParts[3]}`
-  //       newAliasesMap.set(newAlias, courseId)
-  //       break
-  //     }
-  //   }
-  // }
-
-  // type t = {
-  //   alias: string
-  //   id: string
-  // }
-  // const tasks: t[] = []
-  // let count = 0
-  // for (const [a, id] of newAliasesMap) {
-  //   if (a === "") continue
-  //   const tsk: t = {
-  //     alias: a,
-  //     id: id
-  //   }
-  //   count++
-  //   tasks.push(tsk)
-  // }
-
-  // // for (const t of tasks) {
-  // //   console.log(t)
-  // // }
-
-  // // Deno.exit()
-
-  // const total = tasks.length
-
-  // await Promise.all(
-  //   tasks.map(async (task, index) => {
-  //     await googleClassroom.createCourseAlias(
-  //       store.auth,
-  //       task.id,
-  //       task.alias,
-  //       index,
-  //       total,
-  //     )
-  //   }),
-  // )
+  await Deno.writeTextFile("./cache/hello.txt", dataToStore);
 
   Deno.exit()
 }
@@ -380,6 +271,12 @@ async function runCourseTasks(store: Store) {
       )
     }),
   )
+
+  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
+  console.log(
+    `\n%c[ Cache is now expired ]\n`,
+    'color:red',
+  )
 }
 
 async function runUpdateAndArchiveTasks(store: Store) {
@@ -452,6 +349,12 @@ async function runCourseDeletionTasks(store: Store) {
       )
     }),
   )
+
+  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
+  console.log(
+    `\n%c[ Cache is now expired ]\n`,
+    'color:red',
+  )
 }
 
 function viewSubejct(subject: string) {
@@ -474,6 +377,8 @@ async function deleteCourse(store: Store, alias: string) {
   const total = 1
 
   await googleClassroom.deleteCourse(auth, courseId, index, total)
+
+  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
 }
 
 function logCsvFileLocations() {

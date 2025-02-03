@@ -235,6 +235,11 @@ export async function deleteCourseAlias(
   }
 }
 
+export type CourseAliases = {
+  id: string,
+  aliases: string[]
+}
+
 export async function getCourseAliases(
   auth: GoogleAuth,
   courseId: string,
@@ -269,10 +274,12 @@ export async function getCourseAliases(
     })
   }
 
-  return {
+  const courseAliases: CourseAliases = {
     id: courseId,
     aliases,
   }
+
+  return courseAliases
 }
 
 export interface CourseMemberProps {

@@ -611,7 +611,6 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
     remoteCourseArchiveCandidates.delete(currentTimetabledClass)
 
-    // const classYearLevel = subjectCode.slice(-2)
     let classYearLevel = ""
     const potentialYearLevel = subjectCode.substring(0, 2)
     if (isNumeric(potentialYearLevel)) {
