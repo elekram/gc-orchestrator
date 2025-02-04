@@ -213,6 +213,7 @@ function getCompositeClasses(classExceptions: string[]) {
     let compositeClassName = ''
     let subjectCode = ''
     let domain = ''
+    let domainCode = ''
     const classCodes: Set<string> = new Set()
     const classCodesWithSemeterPrefix: Set<string> = new Set()
     const subjectNames: Set<string> = new Set()
@@ -235,7 +236,11 @@ function getCompositeClasses(classExceptions: string[]) {
       }
 
       if (c[0]['Faculty Name']) {
-        domain = c[0]['Faculty Name'].split('-')[0].toUpperCase()
+        domain = c[0]['Faculty Name']
+      }
+
+      if (c[0]['Faculty Code']) {
+        domainCode = c[0]['Faculty Code'].toUpperCase()
       }
 
       if (c[0]['Course Name']) {
@@ -260,10 +265,10 @@ function getCompositeClasses(classExceptions: string[]) {
       classCodesWithSemeterPrefix.add(classCode)
       compositeClassName += `${classCode}-`
 
-      const leaders = getLeaders(domain)
+      const leaders = getLeaders(domainCode)
       const teachersFromSubjectCode = getSubjectTeachers(
         subjectCode,
-        domain,
+        domainCode,
         subjectAdmins,
       )
       const teachersFromClassCode = getClassTeachers(classCode)
@@ -282,7 +287,7 @@ function getCompositeClasses(classExceptions: string[]) {
       subjectNames,
       classCodes,
       classCodesWithSemeterPrefix,
-      subjectLeaders: new Set(getLeaders(domain)),
+      subjectLeaders: new Set(getLeaders(domainCode)),
       subjectTeachers: new Set(subjectTeachers),
       classTeachers: new Set(classTeachers),
       domain,
@@ -348,11 +353,12 @@ export function getSubjectsAndClasses(
       continue
     }
 
-    const domain = (row['Faculty Name'] as string).split('-')[0].toUpperCase().trim()
-    const leaders = getLeaders(domain)
+    const domain = (row['Faculty Name'] as string)
+    const domainCode = (row['Faculty Code'] as string).toUpperCase().trim()
+    const leaders = getLeaders(domainCode)
     const subjectTeachers = getSubjectTeachers(
       subjectCodeWithSemeterPrefix,
-      domain,
+      domainCode,
       subjectAdmins,
     )
     const classTeachers = getClassTeachers(classCodeWithSemeterPrefix)
@@ -399,7 +405,7 @@ function getClassTeachers(classCodeWithSemeterPrefix: string) {
   const classTeachers: Set<string> = new Set()
 
   for (const row of timetable) {
-    if (row['Class Code'] == classCodeWithSemeterPrefix) {
+    if (row['Class Code'] === classCodeWithSemeterPrefix) {
       if (!row['Teacher Code']) continue
 
       if (row['Teacher Code'] === "" || row['Teacher Code'] === "-") {
@@ -439,7 +445,7 @@ function getLeaders(domain: string): Set<string> | undefined {
 
   for (const row of unscheduledDuties) {
     const hasDomainLeaderRow: boolean = (row['Responsibility'] as string).includes(
-      'Domain Leader',
+      'Google Classroom',
     )
 
     if (hasDomainLeaderRow) {
