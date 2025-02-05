@@ -375,14 +375,16 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
         const studentsToRemove = diffedStudents.arr2Diff
         for (const student of studentsToRemove) {
-          store.tasks.enrolmentTasks.push({
-            type: CourseEnrolmentType.Students,
-            action: EnrolmentTask.Remove,
-            courseId: remoteCourse.courseId,
-            user: {
-              userId: student,
-            },
-          })
+          if (appSettings.removeNonTimetabledStudents) {
+            store.tasks.enrolmentTasks.push({
+              type: CourseEnrolmentType.Students,
+              action: EnrolmentTask.Remove,
+              courseId: remoteCourse.courseId,
+              user: {
+                userId: student,
+              },
+            })
+          }
         }
       }
     }
