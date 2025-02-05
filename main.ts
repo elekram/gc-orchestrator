@@ -36,7 +36,7 @@ if (args.has('--STAGING'.toLowerCase())) {
   addTimetableToStore(store)
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
-  tasks.addSubjectCourseTasksToStore(store)
+  await addTasksToStore(store)
   tasks.addTeacherEnrolmentTasksToStore(store)
   await logTasks(store, 'course')
   await logTasks(store, 'enrolment')

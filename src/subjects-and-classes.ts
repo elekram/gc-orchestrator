@@ -8,6 +8,7 @@ export interface Class {
   classCodeWithSemeterPrefix: string
   name: string
   domain: string
+  domainCode: string
   subjectLeaders: Set<string>
   subjectTeachers: Set<string>
   classTeachers: Set<string>
@@ -26,6 +27,7 @@ export interface CompositeClass {
   subjectTeachers: Set<string>
   classTeachers: Set<string>
   domain: string
+  domainCode: string
   subjectStudents: Set<string>
   students: Set<string>
 }
@@ -103,6 +105,7 @@ function getYearLevelClasses() {
     const c: Class = {
       subjectCode: yearLevel + "STUDENTS",
       domain: "N/A",
+      domainCode: "N/A",
       name: y + " Students",
       classCodeWithSemeterPrefix: yearLevel + "STUDENTS",
       students: new Set<string>(),
@@ -291,6 +294,7 @@ function getCompositeClasses(classExceptions: string[]) {
       subjectTeachers: new Set(subjectTeachers),
       classTeachers: new Set(classTeachers),
       domain,
+      domainCode,
       students: new Set(students),
       subjectStudents: new Set(),
     })
@@ -385,6 +389,7 @@ export function getSubjectsAndClasses(
       classCodeWithSemeterPrefix,
       name,
       domain,
+      domainCode,
       subjectLeaders: new Set<string>(leaders),
       subjectTeachers: new Set<string>(subjectTeachers),
       classTeachers: new Set<string>(classTeachers),

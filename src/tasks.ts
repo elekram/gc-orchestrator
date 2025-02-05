@@ -72,7 +72,7 @@ export function addSubjectCourseTasksToStore(store: Store) {
 
     if (alreadyProcessedSubjects.has(subjectCode)) continue
     if (c.isExceptedSubject) continue
-    if (!subjectsCourseMap.has(c.domain)) continue
+    if (!subjectsCourseMap.has(c.domainCode)) continue
 
     let classYearLevel = ""
     const potentialYearLevel = subjectCode.substring(0, 2)
@@ -83,13 +83,12 @@ export function addSubjectCourseTasksToStore(store: Store) {
     if (!isNumeric(potentialYearLevel)) {
       classYearLevel = subjectCode.substring(0, 1)
     }
-    // const classYearLevel = subjectCode.slice(-2)
 
     if (!isNumeric(classYearLevel)) {
       throw `Year level in subject code failed check ${subjectCode}`
     }
 
-    if (!subjectsCourseMap.get(c.domain)?.includes(classYearLevel)) continue
+    if (!subjectsCourseMap.get(c.domainCode)?.includes(classYearLevel)) continue
 
     const courseType = CourseType.SubjectCourse
     const academicYear = getAcademicYearForClasscode(classCode)
