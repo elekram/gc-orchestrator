@@ -50,6 +50,16 @@ export function addDailyOrgReplacementsToStore(
     'color:green',
   )
 
+  if (dailyOrgReplacementClasses.size) {
+    console.log(`%c[ Today's Replacements ]\n`, 'color:blue')
+    for (const [k, v] of dailyOrgReplacementClasses) {
+      for (const t of v.subjectTeachers) {
+        const teacher = t.split('@')
+        console.log(`%c${teacher[0].toLocaleUpperCase()}  -->   ${k}`, 'color:cyan')
+      }
+    }
+  }
+
   store.replacements.dailyorgReplacements = dailyOrgReplacementClasses
 }
 

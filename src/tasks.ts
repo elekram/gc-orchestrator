@@ -375,16 +375,16 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
 
         const studentsToRemove = diffedStudents.arr2Diff
         for (const student of studentsToRemove) {
-          if (appSettings.removeNonTimetabledStudents) {
-            store.tasks.enrolmentTasks.push({
-              type: CourseEnrolmentType.Students,
-              action: EnrolmentTask.Remove,
-              courseId: remoteCourse.courseId,
-              user: {
-                userId: student,
-              },
-            })
-          }
+          if (!appSettings.removeNonTimetabledStudents) continue
+
+          store.tasks.enrolmentTasks.push({
+            type: CourseEnrolmentType.Students,
+            action: EnrolmentTask.Remove,
+            courseId: remoteCourse.courseId,
+            user: {
+              userId: student,
+            },
+          })
         }
       }
     }
@@ -565,16 +565,16 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
               ?.subjectTeachers.has(teacher)
           ) continue
 
-          if (appSettings.removeNonTimetabledTeachers) {
-            store.tasks.enrolmentTasks.push({
-              type: CourseEnrolmentType.Teachers,
-              action: EnrolmentTask.Remove,
-              courseId: remoteCourse.courseId,
-              user: {
-                userId: teacher,
-              },
-            })
-          }
+          if (!appSettings.removeNonTimetabledTeachers) continue
+
+          store.tasks.enrolmentTasks.push({
+            type: CourseEnrolmentType.Teachers,
+            action: EnrolmentTask.Remove,
+            courseId: remoteCourse.courseId,
+            user: {
+              userId: teacher,
+            },
+          })
         }
       }
     }

@@ -388,7 +388,17 @@ function logCsvFileLocations() {
   )
 
   console.log(
-    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]`,
+    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
     'color:cyan',
+  )
+
+  console.log(
+    `%c[ Cache File Location: ${appSettings.cacheFile.substring(1)} ]\n`,
+    'color:purple',
+  )
+
+  console.log(
+    `%c[ Cache State File: ${appSettings.cacheStateFile.substring(1)} ]`,
+    'color:purple',
   )
 }
