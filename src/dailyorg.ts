@@ -51,7 +51,7 @@ export function addDailyOrgReplacementsToStore(
   )
 
   if (dailyOrgReplacementClasses.size) {
-    console.log(`%c[ Today's Replacements ]\n`, 'color:blue')
+    console.log(`%c[ Today's Replacements ]\n`, 'color:orange')
     for (const [k, v] of dailyOrgReplacementClasses) {
       for (const t of v.subjectTeachers) {
         const teacher = t.split('@')
