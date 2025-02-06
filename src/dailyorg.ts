@@ -55,7 +55,7 @@ export function addDailyOrgReplacementsToStore(
     for (const [k, v] of dailyOrgReplacementClasses) {
       for (const t of v.subjectTeachers) {
         const teacher = t.split('@')
-        console.log(`%c${teacher[0].toLocaleUpperCase()}  -->   ${k}`, 'color:cyan')
+        console.log(`%c  ${teacher[0].toLocaleUpperCase()}  -->   ${k}`, 'color:yellow')
       }
     }
   }
