@@ -97,8 +97,16 @@ function getTodaysTeacherReplacements(
     if (!row['Substitute Code']) continue
     if (row['Substitute Code'].trim() === "-") continue
 
-    const replacementTeacher = `${row['Substitute Code']?.toLowerCase()
-      }${appSettings.domain}`
+    const sub = row['Substitute Code'].split('-')
+    let replacementTeacher = ''
+
+    if (sub.length > 1) {
+      replacementTeacher = `${sub[1].toLowerCase()}${appSettings.domain}`
+    }
+
+    if (sub.length == 1) {
+      replacementTeacher = `${sub[0].toLowerCase()}${appSettings.domain}`
+    }
 
     if (!enrolments.has(replacementTeacher)) {
       enrolments.set(replacementTeacher, new Set())
