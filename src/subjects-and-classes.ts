@@ -439,8 +439,13 @@ function getPeriodSchedule(classCode: string) {
       continue
     }
 
-    periodSchedule.set(dayNumber, new Set<number>())
-    periodSchedule.get(dayNumber)?.add(periodNumber)
+    if (!isNaN(dayNumber)) {
+      periodSchedule.set(dayNumber, new Set<number>())
+
+      if (!isNaN(periodNumber)) {
+        periodSchedule.get(dayNumber)?.add(periodNumber)
+      }
+    }
   }
   return periodSchedule
 }

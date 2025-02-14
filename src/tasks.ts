@@ -66,13 +66,23 @@ export function addSubjectCourseTasksToStore(store: Store) {
 
   for (const [code, c] of store.timetable.classes) {
     const subjectCode = code.split('.')[0]
-    const classCode = code.split('.')[1]
-
-    const subjectsCourseMap = appSettings.subjectsCourseMap
-
     if (alreadyProcessedSubjects.has(subjectCode)) continue
     if (c.isExceptedSubject) continue
-    if (!subjectsCourseMap.has(c.domainCode)) continue
+
+    const classCode = code.split('.')[1]
+    const subjectsCourseMap = appSettings.subjectsCourseMap
+
+
+    if (!subjectsCourseMap.has(c.domainCode.toUpperCase())) continue
+
+    if (!c.periodSchedule.size) continue
+    let hasPeriods = false
+    for (const schedule of c.periodSchedule) {
+      if (schedule[1].size) {
+        hasPeriods = true
+      }
+    }
+    if (!hasPeriods) continue
 
     let classYearLevel = ""
     const potentialYearLevel = subjectCode.substring(0, 2)
@@ -190,12 +200,23 @@ export async function addTeacherCourseTasksToStore(store: Store) {
     Subject course with only teachers enrolled
   */
   const alreadyProcessedSubjects = new Set<string>()
+
   for (const [code, c] of store.timetable.classes) {
     const subjectCode = code.split('.')[0]
     const _classCode = code.split('.')[1]
 
     if (c.isExceptedSubject) continue
     if (alreadyProcessedSubjects.has(c.subjectCode)) continue
+
+    if (!c.periodSchedule.size) continue
+
+    let hasPeriods = false
+    for (const schedule of c.periodSchedule) {
+      if (schedule[1].size) {
+        hasPeriods = true
+      }
+    }
+    if (!hasPeriods) continue
 
     const courseType = CourseType.TeacherCourse
     const alias = `${appSettings.aliasVersion}.${courseType}.${subjectCode}`
@@ -235,13 +256,6 @@ export async function addTeacherCourseTasksToStore(store: Store) {
 }
 
 // deno-lint-ignore require-await
-export async function addYearLevelClassCourseTasksToStore(store: Store) {
-  for (const [code, c] of store.timetable.yearLevelClasses) {
-    const courseType = CourseType.ClassCourse
-  }
-}
-
-// deno-lint-ignore require-await
 export async function addClassCourseTasksToStore(store: Store) {
   for (const [code, c] of store.timetable.classes) {
     const _subjectCode = code.split('.')[0]
@@ -249,6 +263,15 @@ export async function addClassCourseTasksToStore(store: Store) {
 
     if (c.isExceptedSubject) continue
     if (c.isComposite) continue
+    if (!c.periodSchedule.size) continue
+
+    let hasPeriods = false
+    for (const schedule of c.periodSchedule) {
+      if (schedule[1].size) {
+        hasPeriods = true
+      }
+    }
+    if (!hasPeriods) continue
 
     const courseType = CourseType.ClassCourse
     const academicYear = getAcademicYearForClasscode(classCode)
@@ -603,6 +626,16 @@ export async function addCourseArchiveTasksToStore(store: Store) {
   }
 
   for (const [code, c] of store.timetable.classes) {
+    if (!c.periodSchedule.size) continue
+
+    let hasPeriods = false
+    for (const schedule of c.periodSchedule) {
+      if (schedule[1].size) {
+        hasPeriods = true
+      }
+    }
+    if (!hasPeriods) continue
+
     const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
 
@@ -626,7 +659,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
       throw `Year level in subject code failed check ${subjectCode}`
     }
 
-    if (appSettings.subjectsCourseMap.get(c.domain)?.includes(classYearLevel)) {
+    if (appSettings.subjectsCourseMap.get(c.domainCode)?.includes(classYearLevel)) {
       const currentTimetabledSujectCourse =
         `${appSettings.aliasVersion}.${CourseType.SubjectCourse}.${subjectCode}.${academicYear}`
 
