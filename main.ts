@@ -1,4 +1,5 @@
 import appSettings from './config/config.ts'
+import enrolmentExceptions from './config/enorolment-exceptions.ts'
 import { Store, store } from './src/store.ts'
 import { getToken } from './src/google-jwt-sa.ts'
 import { processArgs } from './src/args.ts'
@@ -25,6 +26,9 @@ store.auth = await getToken(googleServiceAccountJson, {
   delegationSubject: appSettings.jwtSubject,
 })
 
+store.enrolmentExceptions.teacherExceptions = enrolmentExceptions.teacherExceptions
+store.enrolmentExceptions.studentExceptions = enrolmentExceptions.studentExceptions
+
 if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
@@ -37,10 +41,6 @@ if (args.has('--STAGING'.toLowerCase())) {
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
   await addTasksToStore(store)
-  console.log("Create Tasks: " + store.tasks.courseCreationTasks.length)
-  console.log("Update Taks: " + store.tasks.courseUpdateTasks.length)
-  console.log("Archive Tasks: " + store.tasks.courseArchiveTasks.length)
-  tasks.addTeacherEnrolmentTasksToStore(store)
   await logTasks(store, 'course')
   await logTasks(store, 'enrolment')
   await staging(store)
@@ -48,16 +48,6 @@ if (args.has('--STAGING'.toLowerCase())) {
 }
 
 if (args.has('--SCRATCH'.toLowerCase())) {
-
-  const cacheModel = [{
-    some: "data",
-    is: true
-  }]
-
-  const dataToStore = JSON.stringify(cacheModel)
-
-  await Deno.writeTextFile("./cache/hello.txt", dataToStore);
-
   Deno.exit()
 }
 
@@ -65,6 +55,115 @@ function isNumeric(value: string) {
   return /^[0-9]+$/.test(value)
 }
 
+if (args.has('--COURSE-MEMBER'.toLowerCase())) {
+  console.log("\n\n%c[ Please enter the course alias - example '7ENGA' ]", 'color:green')
+  const courseAliasInput = prompt('\nCourse Alias:')
+  let alias = ''
+  if (typeof courseAliasInput === 'string') {
+
+    await addCourseAliasMapToStore(store)
+
+    let foundMatch = false
+    for (const [courseAlias, _] of store.remote.courseAliases) {
+      const aliasParts = courseAlias.split('.')
+      const courseType = aliasParts[1]
+      const code = aliasParts[2].toUpperCase()
+
+      if (code === courseAliasInput.toUpperCase()) {
+        foundMatch = true
+        switch (courseType) {
+          case tasks.CourseType.TeacherCourse: {
+            alias = `${appSettings.aliasVersion}.${courseType}.${code}`
+            break
+          }
+          case tasks.CourseType.ClassCourse: {
+            const year = tasks.getAcademicYearForClasscode(courseAliasInput)
+            alias = `${appSettings.aliasVersion}.${courseType}.${code}.${year}`
+            break
+          }
+          default:
+            console.log("%cError. Must exit", 'color:red')
+            Deno.exit()
+        }
+      }
+    }
+    if (!foundMatch) {
+      console.log("%cNo course found for: " + courseAliasInput + "", 'color:red')
+      console.log("%cScript must exit!\n", 'color:yellow')
+      Deno.exit()
+    }
+  }
+
+  console.log(`%cCourse Identifier: ${alias}`, 'color:yellow')
+
+  console.log(`\n%c[ Choose an Option ]`, 'color:green')
+
+  console.log(`\n%c1: Add Student to ${alias}? `, 'color:cyan')
+  console.log(`%c2: Remove Student from ${alias}? `, 'color:cyan')
+  console.log(`%c3: Add Teacher to ${alias}? `, 'color:magenta')
+  console.log(`%c4: Remove Teacher from ${alias}? `, 'color:magenta')
+  const actionTypeInput = prompt('\nChoose option [1,2,3,4]:')
+
+  let type = ''
+  let method = ''
+  let userInput
+
+  if (typeof actionTypeInput === 'string') {
+    switch (actionTypeInput) {
+      case '1':
+        type = 'students'
+        method = 'POST'
+        console.log('%c\nStudent User Id to add?', 'color:yellow')
+        userInput = prompt('Student [example AAA0001]:')
+        break
+      case '2':
+        type = 'students'
+        method = 'DELETE'
+        console.log('\n%cStudent User Id to remove?', 'color:yellow')
+        userInput = prompt('Student [example AAA0001]:')
+        break
+      case '3':
+        type = 'teachers'
+        method = 'POST'
+        console.log('\n%cTeacher User Id to add?', 'color:yellow')
+        userInput = prompt('Teacher [example lee or bmc]:')
+        break
+      case '4':
+        type = 'teachers'
+        method = 'DELETE'
+        console.log('\n%cTeacher User Id to remove?', 'color:yellow')
+        userInput = prompt('Teacher [example lee or bmc]:')
+        break
+      default:
+        console.log("\nInvalid option. Exiting.\n\n")
+        Deno.exit()
+    }
+  }
+
+  await addUsersToStore(store)
+
+  if (!userInput) {
+    console.log("no useer entered. exiting")
+    Deno.exit()
+  }
+
+  const userId = `${userInput.toLowerCase()}${appSettings.domain}`
+
+  if (!store.remote.activeUsers.has(`${userInput.toLowerCase()}${appSettings.domain}`)) {
+    console.log("\nUser not found: " + userId + "\n\n")
+    Deno.exit()
+  }
+
+  await googleClassroom.addRemoveCourseMember(
+    store.auth,
+    type,
+    userId,
+    alias,
+    method
+  )
+
+  Deno.exit()
+}
 
 if (args.has('--DELETE-COURSE'.toLowerCase())) {
   console.log("\n\n\nPlease enter the course alias - example '2023-ENG07A'")
@@ -135,7 +234,7 @@ if (args.has('--VIEW-SUBJECT'.toLowerCase())) {
 if (args.has('--VIEW-COMPOSITES'.toLowerCase())) {
   console.log('\n%c[ Composite Classes ]\n', 'color:yellow')
   for (const [key, c] of store.timetable.compositeClasses) {
-    console.log(`%c${key}`, 'color:magenta')
+    console.log(`% c${key} `, 'color:magenta')
     console.log(c)
     console.log('\n')
   }
@@ -177,7 +276,7 @@ async function transferCourseOwenership() {
   console.log('\n\n\n%cPlease enter a course Id or Alias', 'color:cyan')
   const userInput_CourseAliasOrId = prompt('\nCourse alias or Id:')
   console.log(
-    `\n\n\n%cPlease enter the UserId to replace ownership for ${userInput_CourseAliasOrId}`,
+    `\n\n\n % cPlease enter the UserId to replace ownership for ${userInput_CourseAliasOrId}`,
     'color:cyan',
   )
   const userInput_newCourseOwnerId = prompt('\nUserID:')
@@ -277,7 +376,7 @@ async function runCourseTasks(store: Store) {
 
   await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
   console.log(
-    `\n%c[ Cache is now expired ]\n`,
+    `\n % c[Cache is now expired ]\n`,
     'color:red',
   )
 }
@@ -355,7 +454,7 @@ async function runCourseDeletionTasks(store: Store) {
 
   await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
   console.log(
-    `\n%c[ Cache is now expired ]\n`,
+    `\n % c[Cache is now expired ]\n`,
     'color:red',
   )
 }

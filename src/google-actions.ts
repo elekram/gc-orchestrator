@@ -100,6 +100,67 @@ export interface Course {
   creationTime: string
 }
 
+export async function addRemoveCourseMember(
+  auth: GoogleAuth,
+  type: string,
+  userId: string,
+  courseId: string,
+  method: string,
+) {
+  if (!userId) {
+    throw 'No User Id'
+  }
+  if (!courseId) {
+    throw 'No User Id'
+  }
+
+  let id = `${encodeURIComponent(courseId)}`
+  if (isNaN(Number(courseId))) {
+    id = `d:${encodeURIComponent(courseId)}`
+  }
+
+  const verb = method === 'POST' ? 'to' : 'from'
+  const encodedMember = `${encodeURIComponent(`${userId}`)}`
+
+  const baseUrl = `https://classroom.googleapis.com/v1/courses`
+  let requestUrl = ''
+  let body = ''
+
+  switch (method) {
+    case 'POST': {
+      body = JSON.stringify({
+        userId
+      })
+      requestUrl = `${baseUrl}/${id}/${type}`
+      break
+    }
+
+    case 'DELETE': {
+      requestUrl = `${baseUrl}/${id}/${type}/${encodedMember}`
+      break
+    }
+  }
+
+  try {
+    const response = await fetch(
+      requestUrl,
+      {
+        method,
+        headers: getHeaders(auth),
+        body,
+      },
+    )
+    const data = await processResponse(response)
+    console.log(
+      `%c[ ${method} ${userId} ${verb} ${courseId} - Status ${data.status} ]\n`,
+      'color:green',
+    )
+  } catch (e: any) {
+    const errorSource = `Error: addRemoveCourseMember() ${courseId} - ${userId}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+  }
+}
+
 export async function listCourses(
   auth: GoogleAuth,
   type: 'teacherId' | 'studentId',

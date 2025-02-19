@@ -7,6 +7,10 @@ import { Course } from './google-actions.ts'
 
 export interface Store {
   auth: GoogleAuth
+  enrolmentExceptions: {
+    teacherExceptions: Map<string, string[]>
+    studentExceptions: Map<string, string[]>
+  }
   timetable: {
     subjects: Set<string>
     classes: Map<string, Class>
@@ -40,6 +44,10 @@ export const store: Store = {
     access_token: '',
     expires_in: 0,
     token_type: '',
+  },
+  enrolmentExceptions: {
+    teacherExceptions: new Map<string, string[]>(),
+    studentExceptions: new Map<string, string[]>(),
   },
   timetable: {
     subjects: new Set<string>(),

@@ -9,6 +9,7 @@
     "aliases": "deno run -A --check main.ts --view-course-aliases",
     "view-subject": "deno run -A --check main.ts --view-subject",
     "view-composites": "deno run -A --check main.ts --view-composites",
+    "edit-course-member": "deno run -A --check main.ts --COURSE-MEMBER",
     "delete-course": "deno run -A --check main.ts --delete-course",
     "transfer-ownership": "deno run -A --check main.ts --transfer-course-ownership",
     "list-courses": "deno run -A --check main.ts --list-courses",

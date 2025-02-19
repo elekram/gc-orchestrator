@@ -3,7 +3,7 @@ import * as googleClassroom from './google-actions.ts'
 import { diffArrays } from './diff-arrays.ts'
 import appSettings from '../config/config.ts'
 
-enum CourseType {
+export enum CourseType {
   TeacherCourse = 'TEACHER_COURSE',
   ClassCourse = 'CLASS_COURSE',
   SubjectCourse = 'SUBJECT_COURSE',
@@ -65,24 +65,16 @@ export function addSubjectCourseTasksToStore(store: Store) {
   const alreadyProcessedSubjects = new Set<string>()
 
   for (const [code, c] of store.timetable.classes) {
-    const subjectCode = code.split('.')[0]
-    if (alreadyProcessedSubjects.has(subjectCode)) continue
+    if (!c.hasSchedule) continue
     if (c.isExceptedSubject) continue
 
+    const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
+
+    if (alreadyProcessedSubjects.has(subjectCode)) continue
     const subjectsCourseMap = appSettings.subjectsCourseMap
 
-
     if (!subjectsCourseMap.has(c.domainCode.toUpperCase())) continue
-
-    if (!c.periodSchedule.size) continue
-    let hasPeriods = false
-    for (const schedule of c.periodSchedule) {
-      if (schedule[1].size) {
-        hasPeriods = true
-      }
-    }
-    if (!hasPeriods) continue
 
     let classYearLevel = ""
     const potentialYearLevel = subjectCode.substring(0, 2)
@@ -202,21 +194,13 @@ export async function addTeacherCourseTasksToStore(store: Store) {
   const alreadyProcessedSubjects = new Set<string>()
 
   for (const [code, c] of store.timetable.classes) {
+    if (!c.hasSchedule) continue
+
     const subjectCode = code.split('.')[0]
     const _classCode = code.split('.')[1]
 
     if (c.isExceptedSubject) continue
     if (alreadyProcessedSubjects.has(c.subjectCode)) continue
-
-    if (!c.periodSchedule.size) continue
-
-    let hasPeriods = false
-    for (const schedule of c.periodSchedule) {
-      if (schedule[1].size) {
-        hasPeriods = true
-      }
-    }
-    if (!hasPeriods) continue
 
     const courseType = CourseType.TeacherCourse
     const alias = `${appSettings.aliasVersion}.${courseType}.${subjectCode}`
@@ -258,21 +242,12 @@ export async function addTeacherCourseTasksToStore(store: Store) {
 // deno-lint-ignore require-await
 export async function addClassCourseTasksToStore(store: Store) {
   for (const [code, c] of store.timetable.classes) {
-    const _subjectCode = code.split('.')[0]
-    const classCode = code.split('.')[1]
-
+    if (!c.hasSchedule) continue
     if (c.isExceptedSubject) continue
     if (c.isComposite) continue
-    if (!c.periodSchedule.size) continue
 
-    let hasPeriods = false
-    for (const schedule of c.periodSchedule) {
-      if (schedule[1].size) {
-        hasPeriods = true
-      }
-    }
-    if (!hasPeriods) continue
-
+    const _subjectCode = code.split('.')[0]
+    const classCode = code.split('.')[1]
     const courseType = CourseType.ClassCourse
     const academicYear = getAcademicYearForClasscode(classCode)
     const alias = `${appSettings.aliasVersion}.${courseType}.${classCode}.${academicYear}`
@@ -399,6 +374,12 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
         const studentsToRemove = diffedStudents.arr2Diff
         for (const student of studentsToRemove) {
           if (!appSettings.removeNonTimetabledStudents) continue
+
+          const classCode = courseId.split('.')[2] // classcode from course alias
+          const s = student.split('@')[0].toUpperCase()
+          if (store.enrolmentExceptions.studentExceptions.get(s)?.includes(classCode)) {
+            continue
+          }
 
           store.tasks.enrolmentTasks.push({
             type: CourseEnrolmentType.Students,
@@ -582,6 +563,11 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
           }
 
           const classCode = courseId.split('.')[2] // classcode from course alias
+          const t = teacher.split('@')[0].toUpperCase()
+          if (store.enrolmentExceptions.teacherExceptions.get(t)?.includes(classCode)) {
+            continue
+          }
+
           if (
             store.replacements.dailyorgReplacements.has(classCode) &&
             store.replacements.dailyorgReplacements.get(classCode)
@@ -626,10 +612,10 @@ export async function addCourseArchiveTasksToStore(store: Store) {
   }
 
   for (const [code, c] of store.timetable.classes) {
-    if (!c.periodSchedule.size) continue
+    if (!c.hasSchedule) continue
 
     let hasPeriods = false
-    for (const schedule of c.periodSchedule) {
+    for (const schedule of c.schedule) {
       if (schedule[1].size) {
         hasPeriods = true
       }

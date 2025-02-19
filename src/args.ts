@@ -15,6 +15,7 @@ export function processArgs(rawArgs: string[]) {
     '--replace-teacher',
     '--delete-course',
     '--transfer-course-ownership',
+    '--course-member',
     '--list-courses',
     '--staging',
     '--scratch',
