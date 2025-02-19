@@ -66,52 +66,69 @@ if (args.has('--SCRATCH'.toLowerCase())) {
 }
 
 if (args.has('--COURSE-MEMBER'.toLowerCase())) {
-  console.log("\n\n%c[ Please enter the course alias - example '7ENGA' ]", 'color:green')
+  console.log("\n\n%c[ Please enter a comma separated list of class codes - example '7enga, 7engb' ]", 'color:yellow')
   const courseAliasInput = prompt('\nCourse Alias:')
+  const courses = courseAliasInput?.split(',')
+
   let alias = ''
-  if (typeof courseAliasInput === 'string') {
+  const aliases: string[] = []
 
-    await addCourseAliasMapToStore(store)
+  if (!courses?.length) {
+    Deno.exit()
+  }
 
-    let foundMatch = false
-    for (const [courseAlias, _] of store.remote.courseAliases) {
-      const aliasParts = courseAlias.split('.')
-      const courseType = aliasParts[1]
-      const code = aliasParts[2].toUpperCase()
+  for (const c of courses) {
+    if (typeof c === 'string') {
 
-      if (code === courseAliasInput.toUpperCase()) {
-        foundMatch = true
-        switch (courseType) {
-          case tasks.CourseType.TeacherCourse: {
-            alias = `${appSettings.aliasVersion}.${courseType}.${code}`
-            break
+      await addCourseAliasMapToStore(store)
+
+      let foundMatch = false
+
+      for (const [courseAlias, _] of store.remote.courseAliases) {
+        const aliasParts = courseAlias.split('.')
+        const courseType = aliasParts[1]
+        const code = aliasParts[2].toUpperCase()
+
+        if (code === c.toUpperCase().trim()) {
+          foundMatch = true
+          switch (courseType) {
+            case tasks.CourseType.TeacherCourse: {
+              alias = `${appSettings.aliasVersion}.${courseType}.${code}`
+              aliases.push(alias)
+              break
+            }
+            case tasks.CourseType.ClassCourse: {
+              const year = tasks.getAcademicYearForClasscode(code)
+              alias = `${appSettings.aliasVersion}.${courseType}.${code}.${year}`
+              aliases.push(alias)
+              break
+            }
+            default:
+              console.log("%cError. Must exit", 'color:red')
+              Deno.exit()
           }
-          case tasks.CourseType.ClassCourse: {
-            const year = tasks.getAcademicYearForClasscode(courseAliasInput)
-            alias = `${appSettings.aliasVersion}.${courseType}.${code}.${year}`
-            break
-          }
-          default:
-            console.log("%cError. Must exit", 'color:red')
-            Deno.exit()
         }
       }
-    }
-    if (!foundMatch) {
-      console.log("%cNo course found for: " + courseAliasInput + "", 'color:red')
-      console.log("%cScript must exit!\n", 'color:yellow')
-      Deno.exit()
+      if (!foundMatch) {
+        console.log("%cNo course found for: " + c + "", 'color:red')
+        console.log("%cScript must exit!\n", 'color:yellow')
+        Deno.exit()
+      }
     }
   }
 
-  console.log(`%cCourse Identifier: ${alias}`, 'color:yellow')
+  console.log(`%c[ Courses to Edit ]\n`, 'color:yellow')
 
-  console.log(`\n%c[ Choose an Option ]`, 'color:green')
+  for (const a of aliases) {
+    console.log(`%c  ${a}`, 'color:lightblue')
+  }
 
-  console.log(`\n%c1: Add Student to ${alias}? `, 'color:cyan')
-  console.log(`%c2: Remove Student from ${alias}? `, 'color:cyan')
-  console.log(`%c3: Add Teacher to ${alias}? `, 'color:magenta')
-  console.log(`%c4: Remove Teacher from ${alias}? `, 'color:magenta')
+  console.log(`\n%c[ Choose an Option ]`, 'color:yellow')
+
+  console.log(`\n%c1: Add Student? `, 'color:cyan')
+  console.log(`%c2: Remove Student? `, 'color:cyan')
+  console.log(`%c3: Add Teacher? `, 'color:magenta')
+  console.log(`%c4: Remove Teacher? `, 'color:magenta')
   const actionTypeInput = prompt('\nChoose option [1,2,3,4]:')
 
   let type = ''
@@ -123,25 +140,25 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
       case '1':
         type = 'students'
         method = 'POST'
-        console.log('%c\nStudent User Id to add?', 'color:yellow')
+        console.log('%c\n[ Student User Id to add? ]\n', 'color:yellow')
         userInput = prompt('Student [example AAA0001]:')
         break
       case '2':
         type = 'students'
         method = 'DELETE'
-        console.log('\n%cStudent User Id to remove?', 'color:yellow')
+        console.log('\n%c[ Student User Id to remove? ]\n', 'color:yellow')
         userInput = prompt('Student [example AAA0001]:')
         break
       case '3':
         type = 'teachers'
         method = 'POST'
-        console.log('\n%cTeacher User Id to add?', 'color:yellow')
+        console.log('\n%c[ Teacher User Id to add? ]\n', 'color:yellow')
         userInput = prompt('Teacher [example lee or bmc]:')
         break
       case '4':
         type = 'teachers'
         method = 'DELETE'
-        console.log('\n%cTeacher User Id to remove?', 'color:yellow')
+        console.log('\n%c[ Teacher User Id to remove?]\n', 'color:yellow')
         userInput = prompt('Teacher [example lee or bmc]:')
         break
       default:
@@ -164,13 +181,18 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
     Deno.exit()
   }
 
-  await googleClassroom.addRemoveCourseMember(
-    store.auth,
-    type,
-    userId,
-    alias,
-    method
-  )
+  const verb = method === 'POST' ? 'to' : 'from'
+
+  for (const a of aliases) {
+    console.log(`\n%c${method} ${type.slice(0, -1)} ${userId} ${verb} ${a}`, 'color:lightblue')
+    await googleClassroom.addRemoveCourseMember(
+      store.auth,
+      type,
+      userId,
+      a,
+      method
+    )
+  }
 
   Deno.exit()
 }
