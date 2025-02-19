@@ -13,7 +13,6 @@ import { logTasks } from './src/log-tasks.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
 import { parse } from 'std/csv/mod.ts'
-import { staging } from './src/staging.ts'
 
 const args = processArgs(Deno.args)
 
@@ -37,22 +36,33 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
 }
 
 if (args.has('--STAGING'.toLowerCase())) {
+  logCsvFileLocations()
   addTimetableToStore(store)
+
+  if (appSettings.runDailyorgTasks) {
+    const dailyorgFileLocation = appSettings.dailyorgFileLocation
+    const teacherReplacementsFile = appSettings.teacherPeriodReplacementsFileName
+
+    const teacherReplacementsCsv = parse(
+      await Deno.readTextFile(`${dailyorgFileLocation}${teacherReplacementsFile}`),
+      { skipFirstRow: true },
+    ) as Record<string, string>[]
+    addDailyOrgReplacementsToStore(store, teacherReplacementsCsv)
+  }
+
+  await addUsersToStore(store)
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
   await addTasksToStore(store)
+
   await logTasks(store, 'course')
   await logTasks(store, 'enrolment')
-  await staging(store)
+
   Deno.exit()
 }
 
 if (args.has('--SCRATCH'.toLowerCase())) {
   Deno.exit()
-}
-
-function isNumeric(value: string) {
-  return /^[0-9]+$/.test(value)
 }
 
 if (args.has('--COURSE-MEMBER'.toLowerCase())) {
@@ -460,10 +470,6 @@ async function runCourseDeletionTasks(store: Store) {
 }
 
 function viewSubejct(subject: string) {
-  // if (!store.timetable.subjects.has(subject.toUpperCase())) {
-  //   console.log('%cSubject not found. Exiting.', 'color:red')
-  // }
-
   console.log('\n%cSubject Classes', 'color:magenta')
   for (const [_key, c] of store.timetable.classes) {
     if (c.subjectCode === subject.toUpperCase()) {
