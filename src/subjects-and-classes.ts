@@ -49,20 +49,40 @@ const classNames = parse(
   { skipFirstRow: true },
 )
 
+if (classNames.length <= 1) {
+  console.log("\n%c[ Fatal: class-details CSV is empty. Script must exit ]\n", 'color:red')
+  Deno.exit()
+}
+
 const timetable = parse(
   await Deno.readTextFile(`${csvFileLocation}${timetableCsvFile}`),
   { skipFirstRow: true },
 )
+
+if (timetable.length <= 1) {
+  console.log("\n%c[ Fatal: Timetable-Quilt CSV is empty. Script must exit ]\n", 'color:red')
+  Deno.exit()
+}
 
 const studentLessons = parse(
   await Deno.readTextFile(`${csvFileLocation}${studentLessonsCsvFile}`),
   { skipFirstRow: true },
 )
 
+if (studentLessons.length <= 1) {
+  console.log("\n%c[ Fatal: Student Allocations CSV is empty. Script must exit ]\n", 'color:red')
+  Deno.exit()
+}
+
 const unscheduledDuties = parse(
   await Deno.readTextFile(`${csvFileLocation}${unscheduledDutiesCsvFile}`),
   { skipFirstRow: true },
 )
+
+if (unscheduledDuties.length <= 1) {
+  console.log("\n%c[ Fatal: Teacher Responsibilities CSV is empty. Script must exit ]\n", 'color:red')
+  Deno.exit()
+}
 
 export function addTimetableToStore(store: Store) {
   // const yearLevelClasses = getYearLevelClasses()
