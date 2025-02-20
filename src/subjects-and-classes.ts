@@ -15,6 +15,7 @@ export interface Class {
   subjectStudents: Set<string>
   students: Set<string>
   schedule: Map<number, Set<number>>
+  rotations: Set<string>
   hasSchedule: boolean
   isComposite: boolean
   isExceptedSubject: boolean
@@ -147,6 +148,14 @@ function getCompositeClasses(classExceptions: string[]) {
   const compositeClassCodes: Set<string> = new Set()
 
   for (const row of timetable) {
+    if (!row['Rotation'] || row['Rotation'] === "" || row['Rotation'] === "-") {
+      continue
+    }
+
+    if (row['Rotation'].toUpperCase() !== appSettings.griddleRotation.toUpperCase()) {
+      continue
+    }
+
     if (!row['Day Number'] || row['Day Number'] === "" || row['Day Number'] === "-") {
       continue
     }
@@ -316,6 +325,20 @@ function isNumeric(str: string) {
     !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
 }
 
+function getTimetableRotation(classCode: string) {
+  const rotations: string[] = []
+
+  for (const row of timetable) {
+    if (row['Class Code'] !== classCode) continue
+    if (!row['Rotation']) continue
+    if (row['Rotation'] === '') continue
+    if (row['Rotation'] === '-') continue
+
+    rotations.push(row['Rotation'].toUpperCase())
+  }
+  return rotations
+}
+
 export function getSubjectsAndClasses(
   compositeClassCodes: Set<string>,
   subjectExceptions: string[],
@@ -392,6 +415,7 @@ export function getSubjectsAndClasses(
       students: new Set<string>(students),
       schedule,
       hasSchedule,
+      rotations: new Set<string>(getTimetableRotation(classCode)),
       isComposite: isComposite,
       isExceptedSubject,
     }

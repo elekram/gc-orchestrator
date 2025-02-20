@@ -67,6 +67,9 @@ export function addSubjectCourseTasksToStore(store: Store) {
   for (const [code, c] of store.timetable.classes) {
     if (!c.hasSchedule) continue
     if (c.isExceptedSubject) continue
+    if (!c.rotations.has(appSettings.griddleRotation.toUpperCase())) continue
+
+
 
     const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
@@ -195,6 +198,7 @@ export async function addTeacherCourseTasksToStore(store: Store) {
 
   for (const [code, c] of store.timetable.classes) {
     if (!c.hasSchedule) continue
+    if (!c.rotations.has(appSettings.griddleRotation.toUpperCase())) continue
 
     const subjectCode = code.split('.')[0]
     const _classCode = code.split('.')[1]
@@ -245,6 +249,7 @@ export async function addClassCourseTasksToStore(store: Store) {
     if (!c.hasSchedule) continue
     if (c.isExceptedSubject) continue
     if (c.isComposite) continue
+    if (!c.rotations.has(appSettings.griddleRotation.toUpperCase())) continue
 
     const _subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
@@ -613,14 +618,7 @@ export async function addCourseArchiveTasksToStore(store: Store) {
 
   for (const [code, c] of store.timetable.classes) {
     if (!c.hasSchedule) continue
-
-    let hasPeriods = false
-    for (const schedule of c.schedule) {
-      if (schedule[1].size) {
-        hasPeriods = true
-      }
-    }
-    if (!hasPeriods) continue
+    if (!c.rotations.has(appSettings.griddleRotation.toUpperCase())) continue
 
     const subjectCode = code.split('.')[0]
     const classCode = code.split('.')[1]
