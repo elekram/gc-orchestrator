@@ -46,7 +46,7 @@ export function addDailyOrgReplacementsToStore(
   }
 
   console.log(
-    `%c[ ${dailyOrgReplacementClasses.size} scheduled replacements added to Store from dailyorg for today ]\n`,
+    `%c[ ${dailyOrgReplacementClasses.size} scheduled replacements added to Store from dailyorg for today ]`,
     'color:green',
   )
 

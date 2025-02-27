@@ -50,6 +50,8 @@ if (args.has('--STAGING'.toLowerCase())) {
     addDailyOrgReplacementsToStore(store, teacherReplacementsCsv)
   }
 
+  testSubjects(store)
+
   await addUsersToStore(store)
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
