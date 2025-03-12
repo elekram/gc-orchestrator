@@ -13,6 +13,8 @@ import { logTasks } from './src/log-tasks.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
 import { parse } from 'std/csv/mod.ts'
+import { format } from 'std/datetime/mod.ts'
+
 
 const args = processArgs(Deno.args)
 
@@ -60,10 +62,15 @@ if (args.has('--STAGING'.toLowerCase())) {
   await logTasks(store, 'course')
   await logTasks(store, 'enrolment')
 
+  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
+  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
+
   Deno.exit()
 }
 
 if (args.has('--SCRATCH'.toLowerCase())) {
+  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
+  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
   Deno.exit()
 }
 
@@ -304,6 +311,9 @@ if (args.has('--RUN-TASKS'.toLowerCase())) {
   await runUpdateAndArchiveTasks(store)
   await runEnrolmentTasks(store)
   await runCourseDeletionTasks(store)
+
+  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
+  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
 }
 
 async function transferCourseOwenership() {
