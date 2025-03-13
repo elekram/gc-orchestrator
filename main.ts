@@ -339,7 +339,7 @@ if (args.has('--RUN-TASKS'.toLowerCase())) {
 
   console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
   console.log(`%c[ Task Sequence Completed ${endTimeStamp} ]\n`, 'color:#FFC300')
-  console.log(`%c[ Duration ${minutes} minutes ]\n`, 'color:#FF5733')
+  console.log(`%c[ Duration ${minutes.toFixed(2)} minutes ]\n`, 'color:#FF5733')
 }
 
 async function transferCourseOwenership() {
