@@ -38,6 +38,11 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
 }
 
 if (args.has('--STAGING'.toLowerCase())) {
+  const dateStart = new Date()
+  const startTimeStamp = format(dateStart, "yyyy-MM-dd HH:mm:ss")
+
+  console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
+
   logCsvFileLocations()
   addTimetableToStore(store)
 
@@ -62,15 +67,26 @@ if (args.has('--STAGING'.toLowerCase())) {
   await logTasks(store, 'course')
   await logTasks(store, 'enrolment')
 
-  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
-  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
+  const dateEnd = new Date()
+  const endTimeStamp = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
+
+  console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
+  console.log(`%c[ Task Sequence Completed ${endTimeStamp} ]\n`, 'color:#FFC300')
+  console.log(`%c[ Duration ${minutes.toFixed(2)} minutes ]\n`, 'color:#FF5733')
 
   Deno.exit()
 }
 
 if (args.has('--SCRATCH'.toLowerCase())) {
-  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
-  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
+  const dateStart = new Date()
+  const dateEnd = new Date()
+  const dStart = format(dateStart, "yyyy-MM-dd HH:mm:ss")
+  const dEnd = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
+  console.log(`\n%c[ Task Sequence Initiated ${dStart} ]`, 'color:#FFC300')
+  console.log(`%c[ Task Sequence Completed ${dEnd} ]\n`, 'color:#FFC300')
+  console.log(`%c[ Duration ${minutes.toFixed(2)} minutes ]\n`, 'color:#FF5733')
   Deno.exit()
 }
 
@@ -126,18 +142,18 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
     }
   }
 
-  console.log(`%c[ Courses to Edit ]\n`, 'color:yellow')
+  console.log(`%c[Courses to Edit ]\n`, 'color:yellow')
 
   for (const a of aliases) {
     console.log(`%c  ${a}`, 'color:lightblue')
   }
 
-  console.log(`\n%c[ Choose an Option ]`, 'color:yellow')
+  console.log(`\n %c[Choose an Option ]`, 'color:yellow')
 
-  console.log(`\n%c1: Add Student? `, 'color:cyan')
-  console.log(`%c2: Remove Student? `, 'color:cyan')
-  console.log(`%c3: Add Teacher? `, 'color:magenta')
-  console.log(`%c4: Remove Teacher? `, 'color:magenta')
+  console.log(`\n %c1: Add Student ? `, 'color:cyan')
+  console.log(`%c2 : Remove Student ? `, 'color:cyan')
+  console.log(`%c3 : Add Teacher ? `, 'color:magenta')
+  console.log(`%c4 : Remove Teacher ? `, 'color:magenta')
   const actionTypeInput = prompt('\nChoose option [1,2,3,4]:')
 
   let type = ''
@@ -193,7 +209,7 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
   const verb = method === 'POST' ? 'to' : 'from'
 
   for (const a of aliases) {
-    console.log(`\n%c${method} ${type.slice(0, -1)} ${userId} ${verb} ${a}`, 'color:lightblue')
+    console.log(`\n %c${method} ${type.slice(0, -1)} ${userId} ${verb} ${a}`, 'color:lightblue')
     await googleClassroom.addRemoveCourseMember(
       store.auth,
       type,
@@ -275,7 +291,7 @@ if (args.has('--VIEW-SUBJECT'.toLowerCase())) {
 if (args.has('--VIEW-COMPOSITES'.toLowerCase())) {
   console.log('\n%c[ Composite Classes ]\n', 'color:yellow')
   for (const [key, c] of store.timetable.compositeClasses) {
-    console.log(`% c${key} `, 'color:magenta')
+    console.log(`%c${key} `, 'color:magenta')
     console.log(c)
     console.log('\n')
   }
@@ -303,6 +319,11 @@ if (args.has('--LOG-COURSE-TASKS'.toLowerCase())) {
 }
 
 if (args.has('--RUN-TASKS'.toLowerCase())) {
+  const dateStart = new Date()
+  const startTimeStamp = format(dateStart, "yyyy-MM-dd HH:mm:ss")
+
+  console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
+
   await addUsersToStore(store)
   await addCoursesToStore(store)
   await addCourseAliasMapToStore(store)
@@ -312,15 +333,20 @@ if (args.has('--RUN-TASKS'.toLowerCase())) {
   await runEnrolmentTasks(store)
   await runCourseDeletionTasks(store)
 
-  const d = format(new Date(), "yyyy-MM-dd HH:mm:ss")
-  console.log(`\n%c[ Task Sequence Finished @ ${d} ]\n`, 'color:#FF5733')
+  const dateEnd = new Date()
+  const endTimeStamp = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
+
+  console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
+  console.log(`%c[ Task Sequence Completed ${endTimeStamp} ]\n`, 'color:#FFC300')
+  console.log(`%c[ Duration ${minutes} minutes ]\n`, 'color:#FF5733')
 }
 
 async function transferCourseOwenership() {
   console.log('\n\n\n%cPlease enter a course Id or Alias', 'color:cyan')
   const userInput_CourseAliasOrId = prompt('\nCourse alias or Id:')
   console.log(
-    `\n\n\n % cPlease enter the UserId to replace ownership for ${userInput_CourseAliasOrId}`,
+    `\n\n\n %cPlease enter the UserId to replace ownership for ${userInput_CourseAliasOrId}`,
     'color:cyan',
   )
   const userInput_newCourseOwnerId = prompt('\nUserID:')
@@ -420,7 +446,7 @@ async function runCourseTasks(store: Store) {
 
   await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
   console.log(
-    `\n % c[Cache is now expired ]\n`,
+    `\n %c[Cache is now expired ]\n`,
     'color:red',
   )
 }
@@ -498,7 +524,7 @@ async function runCourseDeletionTasks(store: Store) {
 
   await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
   console.log(
-    `\n % c[Cache is now expired ]\n`,
+    `\n %c[Cache is now expired ]\n`,
     'color:red',
   )
 }
@@ -525,22 +551,22 @@ async function deleteCourse(store: Store, alias: string) {
 
 function logCsvFileLocations() {
   console.log(
-    `\n%c[ CSV File Location: ${appSettings.csvFileLocation.substring(1)} ]\n`,
+    `\n%c[CSV File Location: ${appSettings.csvFileLocation.substring(1)} ]\n`,
     'color:cyan',
   )
 
   console.log(
-    `%c[ Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
+    `%c[Dailyorg File Location: ${appSettings.dailyorgFileLocation.substring(1)} ]\n`,
     'color:cyan',
   )
 
   console.log(
-    `%c[ Cache File Location: ${appSettings.cacheFile.substring(1)} ]\n`,
+    `%c[Cache File Location: ${appSettings.cacheFile.substring(1)} ]\n`,
     'color:purple',
   )
 
   console.log(
-    `%c[ Cache State File: ${appSettings.cacheStateFile.substring(1)} ]`,
+    `%c[Cache State File: ${appSettings.cacheStateFile.substring(1)} ]`,
     'color:purple',
   )
 }
