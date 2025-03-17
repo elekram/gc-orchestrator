@@ -142,18 +142,18 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
     }
   }
 
-  console.log(`%c[Courses to Edit ]\n`, 'color:yellow')
+  console.log(`%c[ Courses to Edit ]\n`, 'color:yellow')
 
   for (const a of aliases) {
-    console.log(`%c  ${a}`, 'color:lightblue')
+    console.log(`%c${a}`, 'color:lightblue')
   }
 
-  console.log(`\n %c[Choose an Option ]`, 'color:yellow')
+  console.log(`\n%c[ Choose an Option ]`, 'color:yellow')
 
-  console.log(`\n %c1: Add Student ? `, 'color:cyan')
-  console.log(`%c2 : Remove Student ? `, 'color:cyan')
-  console.log(`%c3 : Add Teacher ? `, 'color:magenta')
-  console.log(`%c4 : Remove Teacher ? `, 'color:magenta')
+  console.log(`\n%c1: Add Student?`, 'color:cyan')
+  console.log(`%c2: Remove Student?`, 'color:cyan')
+  console.log(`%c3: Add Teacher?`, 'color:magenta')
+  console.log(`%c4: Remove Teacher?`, 'color:magenta')
   const actionTypeInput = prompt('\nChoose option [1,2,3,4]:')
 
   let type = ''
@@ -183,7 +183,7 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
       case '4':
         type = 'teachers'
         method = 'DELETE'
-        console.log('\n%c[ Teacher User Id to remove?]\n', 'color:yellow')
+        console.log('\n%c[ Teacher User Id to remove? ]\n', 'color:yellow')
         userInput = prompt('Teacher [example lee or bmc]:')
         break
       default:
