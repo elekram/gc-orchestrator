@@ -53,7 +53,9 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
     JSON.stringify(cs),
   )
 
-  const key = prepareKey(keys.private_key)
+  const pemContents = prepareKey(keys.private_key)
+  const binaryDerString = globalThis.atob(pemContents)
+  const binaryDer = str2ab(binaryDerString)
 
   const algorithm = {
     name: 'RSASSA-PKCS1-v1_5',
@@ -62,11 +64,11 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
     },
   }
 
-  const keyArrBuffer = base64.decode(key)
+  // const keyArrBuffer = base64.decode(key)
 
   const privateKey = await crypto.subtle.importKey(
     'pkcs8',
-    keyArrBuffer,
+    binaryDer,
     algorithm,
     false,
     ['sign'],
@@ -88,9 +90,7 @@ async function getToken(keyFile: string, options: ClaimSetOptions) {
 
 async function fetchToken(assertion: string) {
   const grantType = `urn:ietf:params:oauth:grant-type:jwt-bearer`
-  const body = `grant_type=${
-    encodeURIComponent(grantType)
-  }&assertion=${assertion}`
+  const body = `grant_type=${encodeURIComponent(grantType)}&assertion=${assertion}`
 
   const response = await fetch(
     `https://oauth2.googleapis.com/token`,
@@ -138,4 +138,13 @@ function prepareKey(key: string) {
     pem.length - pemFooter.length,
   )
   return pemContents
+}
+
+function str2ab(str: string) {
+  const buf = new ArrayBuffer(str.length)
+  const bufView = new Uint8Array(buf)
+  for (let i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i)
+  }
+  return buf
 }

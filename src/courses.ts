@@ -57,18 +57,18 @@ export async function addCoursesToStore(store: Store) {
       )
     }
 
-    if (
-      !('descriptionHeading' in course && typeof course.descriptionHeading === 'string')
-    ) {
-      tinyLogger.log(
-        'addCoursesToStore()',
-        `descriptionHeading field missing from course: ${course.name} id: ${course.id}`,
-        {
-          logLevel: 'warn',
-          fileName: './log/log.csv',
-        },
-      )
-    }
+    // if (
+    //   !('descriptionHeading' in course && typeof course.descriptionHeading === 'string')
+    // ) {
+    //   tinyLogger.log(
+    //     'addCoursesToStore()',
+    //     `descriptionHeading field missing from course: ${course.name} id: ${course.id}`,
+    //     {
+    //       logLevel: 'warn',
+    //       fileName: './log/log.csv',
+    //     },
+    //   )
+    // }
 
     const googleCourseId = course.id
     store.remote.courses.set(googleCourseId, course)
@@ -84,12 +84,13 @@ export async function addCourseAliasMapToStore(store: Store) {
   let useCache = true
   const courses = store.remote.courses
 
-  const cacheStateFile = await Deno.readTextFile(appSettings.cacheStateFile);
+  const cacheStateFile = await Deno.readTextFile(appSettings.cacheStateFile)
   const cacheState: CacheState = JSON.parse(cacheStateFile)
 
-  const cachedCourseAliasesFile = await Deno.readTextFile(appSettings.cacheFile);
-  const cachedCourseAliases: googleClassroom.CourseAliases[] = JSON.parse(cachedCourseAliasesFile)
-
+  const cachedCourseAliasesFile = await Deno.readTextFile(appSettings.cacheFile)
+  const cachedCourseAliases: googleClassroom.CourseAliases[] = JSON.parse(
+    cachedCourseAliasesFile,
+  )
 
   if (!cacheState.isCacheValid) {
     useCache = false
@@ -152,7 +153,10 @@ export async function addCourseAliasMapToStore(store: Store) {
 
   const newCache = JSON.stringify(courseAliases)
   await Deno.writeTextFile(appSettings.cacheFile, newCache)
-  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: true }))
+  await Deno.writeTextFile(
+    appSettings.cacheStateFile,
+    JSON.stringify({ isCacheValid: true }),
+  )
 
   console.log(
     `\n%c[ Cache store has been updated and will be used on the next run ]\n`,

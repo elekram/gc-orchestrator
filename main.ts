@@ -15,7 +15,6 @@ import { listCourses } from './src/list-courses.ts'
 import { parse } from 'std/csv/mod.ts'
 import { format } from 'std/datetime/mod.ts'
 
-
 const args = processArgs(Deno.args)
 
 const googleServiceAccountJson = await Deno.readTextFile(
@@ -39,7 +38,7 @@ if (args.has('--VIEW-COURSE-ALIASES'.toLowerCase())) {
 
 if (args.has('--STAGING'.toLowerCase())) {
   const dateStart = new Date()
-  const startTimeStamp = format(dateStart, "yyyy-MM-dd HH:mm:ss")
+  const startTimeStamp = format(dateStart, 'yyyy-MM-dd HH:mm:ss')
 
   console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
 
@@ -68,7 +67,7 @@ if (args.has('--STAGING'.toLowerCase())) {
   await logTasks(store, 'enrolment')
 
   const dateEnd = new Date()
-  const endTimeStamp = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const endTimeStamp = format(dateEnd, 'yyyy-MM-dd HH:mm:ss')
   const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
 
   console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
@@ -81,8 +80,8 @@ if (args.has('--STAGING'.toLowerCase())) {
 if (args.has('--SCRATCH'.toLowerCase())) {
   const dateStart = new Date()
   const dateEnd = new Date()
-  const dStart = format(dateStart, "yyyy-MM-dd HH:mm:ss")
-  const dEnd = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const dStart = format(dateStart, 'yyyy-MM-dd HH:mm:ss')
+  const dEnd = format(dateEnd, 'yyyy-MM-dd HH:mm:ss')
   const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
   console.log(`\n%c[ Task Sequence Initiated ${dStart} ]`, 'color:#FFC300')
   console.log(`%c[ Task Sequence Completed ${dEnd} ]\n`, 'color:#FFC300')
@@ -91,7 +90,10 @@ if (args.has('--SCRATCH'.toLowerCase())) {
 }
 
 if (args.has('--COURSE-MEMBER'.toLowerCase())) {
-  console.log("\n\n%c[ Please enter a comma separated list of class codes - example '7enga, 7engb' ]", 'color:yellow')
+  console.log(
+    "\n\n%c[ Please enter a comma separated list of class codes - example '7enga, 7engb' ]",
+    'color:yellow',
+  )
   const courseAliasInput = prompt('\nCourse Alias:')
   const courses = courseAliasInput?.split(',')
 
@@ -104,7 +106,6 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
 
   for (const c of courses) {
     if (typeof c === 'string') {
-
       await addCourseAliasMapToStore(store)
 
       let foundMatch = false
@@ -112,7 +113,7 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
       for (const [courseAlias, _] of store.remote.courseAliases) {
         const aliasParts = courseAlias.split('.')
         const courseType = aliasParts[1]
-        const code = aliasParts[2].toUpperCase()
+        const code = aliasParts[2].toUpperCase().trim()
 
         if (code === c.toUpperCase().trim()) {
           foundMatch = true
@@ -129,14 +130,14 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
               break
             }
             default:
-              console.log("%cError. Must exit", 'color:red')
+              console.log('%cError. Must exit', 'color:red')
               Deno.exit()
           }
         }
       }
       if (!foundMatch) {
-        console.log("%cNo course found for: " + c + "", 'color:red')
-        console.log("%cScript must exit!\n", 'color:yellow')
+        console.log('%cNo course found for: ' + c + '', 'color:red')
+        console.log('%cScript must exit!\n', 'color:yellow')
         Deno.exit()
       }
     }
@@ -187,7 +188,7 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
         userInput = prompt('Teacher [example lee or bmc]:')
         break
       default:
-        console.log("\nInvalid option. Exiting.\n\n")
+        console.log('\nInvalid option. Exiting.\n\n')
         Deno.exit()
     }
   }
@@ -195,27 +196,30 @@ if (args.has('--COURSE-MEMBER'.toLowerCase())) {
   await addUsersToStore(store)
 
   if (!userInput) {
-    console.log("no useer entered. exiting")
+    console.log('no useer entered. exiting')
     Deno.exit()
   }
 
   const userId = `${userInput.toLowerCase()}${appSettings.domain}`
 
   if (!store.remote.activeUsers.has(`${userInput.toLowerCase()}${appSettings.domain}`)) {
-    console.log("\nUser not found: " + userId + "\n\n")
+    console.log('\nUser not found: ' + userId + '\n\n')
     Deno.exit()
   }
 
   const verb = method === 'POST' ? 'to' : 'from'
 
   for (const a of aliases) {
-    console.log(`\n %c${method} ${type.slice(0, -1)} ${userId} ${verb} ${a}`, 'color:lightblue')
+    console.log(
+      `\n %c${method} ${type.slice(0, -1)} ${userId} ${verb} ${a}`,
+      'color:lightblue',
+    )
     await googleClassroom.addRemoveCourseMember(
       store.auth,
       type,
       userId,
       a,
-      method
+      method,
     )
   }
 
@@ -320,7 +324,7 @@ if (args.has('--LOG-COURSE-TASKS'.toLowerCase())) {
 
 if (args.has('--RUN-TASKS'.toLowerCase())) {
   const dateStart = new Date()
-  const startTimeStamp = format(dateStart, "yyyy-MM-dd HH:mm:ss")
+  const startTimeStamp = format(dateStart, 'yyyy-MM-dd HH:mm:ss')
 
   console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
 
@@ -334,7 +338,7 @@ if (args.has('--RUN-TASKS'.toLowerCase())) {
   await runCourseDeletionTasks(store)
 
   const dateEnd = new Date()
-  const endTimeStamp = format(dateEnd, "yyyy-MM-dd HH:mm:ss")
+  const endTimeStamp = format(dateEnd, 'yyyy-MM-dd HH:mm:ss')
   const minutes = (dateEnd.getTime() - dateStart.getTime()) / 1000 / 60
 
   console.log(`\n%c[ Task Sequence Initiated ${startTimeStamp} ]`, 'color:#FFC300')
@@ -444,7 +448,10 @@ async function runCourseTasks(store: Store) {
     }),
   )
 
-  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
+  await Deno.writeTextFile(
+    appSettings.cacheStateFile,
+    JSON.stringify({ isCacheValid: false }),
+  )
   console.log(
     `\n %c[Cache is now expired ]\n`,
     'color:red',
@@ -522,7 +529,10 @@ async function runCourseDeletionTasks(store: Store) {
     }),
   )
 
-  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
+  await Deno.writeTextFile(
+    appSettings.cacheStateFile,
+    JSON.stringify({ isCacheValid: false }),
+  )
   console.log(
     `\n %c[Cache is now expired ]\n`,
     'color:red',
@@ -546,7 +556,10 @@ async function deleteCourse(store: Store, alias: string) {
 
   await googleClassroom.deleteCourse(auth, courseId, index, total)
 
-  await Deno.writeTextFile(appSettings.cacheStateFile, JSON.stringify({ isCacheValid: false }));
+  await Deno.writeTextFile(
+    appSettings.cacheStateFile,
+    JSON.stringify({ isCacheValid: false }),
+  )
 }
 
 function logCsvFileLocations() {
