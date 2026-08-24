@@ -99,6 +99,8 @@ const appSettings = {
   domain: '@yourdomain',
   defaultPageSize: 0,
   taskDelay: 150,
+  taskConcurrency: 8,
+  maxConsecutiveTaskFailures: 5,
   maxRetries: 5,
   retryBaseDelayMs: 500,
   retryMaxDelayMs: 30000,

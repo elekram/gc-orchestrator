@@ -384,8 +384,7 @@ export async function editCourseMembers(
       break
   }
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
+  await sleep(appSettings.taskDelay)
 
   console.log(
     `%c${method} ${type.slice(0, -1)
@@ -410,6 +409,7 @@ export async function editCourseMembers(
   } catch (e: any) {
     const errorSource = `Error: editCourseMembers() ${props.courseId} - ${member}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    throw e
   }
 }
 
@@ -437,8 +437,7 @@ export async function createCourse(
   const courseId = props.requestBody.id
   props.requestBody.id = `d:${props.requestBody.id}`
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
+  await sleep(appSettings.taskDelay)
 
   console.log(`Creating course: ${courseId} - ${index} of ${total} tasks`)
 
@@ -461,8 +460,7 @@ export async function createCourse(
   } catch (e: any) {
     const errorSource = `Error: createCourse() ${courseId}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
-    console.log('Script must exit if course cannot be created')
-    Deno.exit(1)
+    throw e
   }
 }
 
@@ -479,8 +477,7 @@ export async function updateCourse(
 
   const path = 'https://classroom.googleapis.com/v1/courses'
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
+  await sleep(appSettings.taskDelay)
 
   console.log(`\nPatching course ${courseId} - ${index} of ${total} tasks`)
 
@@ -501,6 +498,7 @@ export async function updateCourse(
   } catch (e: any) {
     const errorSource = `Error: updateCourse() ${courseId}`
     console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    throw e
   }
 }
 
@@ -519,23 +517,28 @@ export async function deleteCourse(
 
   const path = 'https://classroom.googleapis.com/v1/courses'
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
+  await sleep(appSettings.taskDelay)
 
   console.log(`Deleting course: ${courseId} - ${index} of ${total} tasks`)
 
-  const data = await fetchWithRetry(
-    `${path}/${id}`,
-    {
-      method: 'DELETE',
-      headers: getHeaders(auth),
-    },
-    `deleteCourse(${courseId})`,
-  )
-  console.log(
-    `%c[ Deleted course ${courseId} - Status ${data.status} ]\n`,
-    'color:green',
-  )
+  try {
+    const data = await fetchWithRetry(
+      `${path}/${id}`,
+      {
+        method: 'DELETE',
+        headers: getHeaders(auth),
+      },
+      `deleteCourse(${courseId})`,
+    )
+    console.log(
+      `%c[ Deleted course ${courseId} - Status ${data.status} ]\n`,
+      'color:green',
+    )
+  } catch (e: any) {
+    const errorSource = `Error: deleteCourse() ${courseId}`
+    console.log(`%c${errorSource} - ${e.code} ${e.message}`, 'color:red')
+    throw e
+  }
 }
 
 export async function changeCourseOwner(

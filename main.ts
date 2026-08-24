@@ -12,6 +12,8 @@ import * as googleClassroom from './src/google-actions.ts'
 import { logTasks } from './src/log-tasks.ts'
 import { addDailyOrgReplacementsToStore } from './src/dailyorg.ts'
 import { listCourses } from './src/list-courses.ts'
+import { runTasks, TaskOutcome } from './src/task-runner.ts'
+import { describeError, logFailures } from './src/log-failures.ts'
 import { parse } from 'std/csv/mod.ts'
 import { format } from 'std/datetime/mod.ts'
 
@@ -429,24 +431,11 @@ async function addTasksToStore(store: Store) {
 }
 
 async function runCourseTasks(store: Store) {
-  const tasks = store.tasks.courseCreationTasks
+  const courseTasks = store.tasks.courseCreationTasks
 
-  if (!tasks.length) {
+  if (!courseTasks.length) {
     return
   }
-
-  console.log('\n%c[ Running Course Tasks ]\n', 'color: yellow')
-
-  await Promise.all(
-    tasks.map(async (task, index) => {
-      await googleClassroom.createCourse(
-        store.auth,
-        task.props,
-        index,
-        tasks.length,
-      )
-    }),
-  )
 
   await Deno.writeTextFile(
     appSettings.cacheStateFile,
@@ -456,78 +445,81 @@ async function runCourseTasks(store: Store) {
     `\n %c[Cache is now expired ]\n`,
     'color:red',
   )
+
+  console.log('\n%c[ Running Course Tasks ]\n', 'color: yellow')
+
+  const outcomes = await runTasks(
+    courseTasks,
+    appSettings.taskConcurrency,
+    (task, index, total) =>
+      googleClassroom.createCourse(store.auth, task.props, index, total),
+    appSettings.maxConsecutiveTaskFailures,
+  )
+
+  await reportOutcomes(
+    'course-creation',
+    outcomes,
+    (task) => task.props.requestBody.id,
+  )
 }
 
 async function runUpdateAndArchiveTasks(store: Store) {
-  const tasks = [
+  const updateTasks = [
     ...store.tasks.courseUpdateTasks,
     ...store.tasks.courseArchiveTasks,
   ]
 
-  if (!tasks.length) {
+  if (!updateTasks.length) {
     return
   }
 
   console.log('\n%c[ Running Update and Archive Tasks ]\n', 'color: yellow')
 
-  await Promise.all(
-    tasks.map(async (task, index) => {
-      await googleClassroom.updateCourse(
-        store.auth,
-        task.props,
-        index,
-        tasks.length,
-      )
-    }),
+  const outcomes = await runTasks(
+    updateTasks,
+    appSettings.taskConcurrency,
+    (task, index, total) =>
+      googleClassroom.updateCourse(store.auth, task.props, index, total),
+    appSettings.maxConsecutiveTaskFailures,
+  )
+
+  await reportOutcomes(
+    'course-update',
+    outcomes,
+    (task) => task.props.requestBody.id,
   )
 }
 
 async function runEnrolmentTasks(store: Store) {
-  const tasks = store.tasks.enrolmentTasks
+  const enrolmentTasks = store.tasks.enrolmentTasks
 
-  if (!tasks.length) {
+  if (!enrolmentTasks.length) {
     return
   }
 
   console.log('\n%c[ Running Enrolment Tasks ]\n', 'color: yellow')
 
-  if (tasks.length) {
-    await Promise.all(
-      tasks.map(async (task, index) => {
-        const props = task
+  const outcomes = await runTasks(
+    enrolmentTasks,
+    appSettings.taskConcurrency,
+    (task, index, total) =>
+      googleClassroom.editCourseMembers(store.auth, task, index, total),
+    appSettings.maxConsecutiveTaskFailures,
+  )
 
-        await googleClassroom.editCourseMembers(
-          store.auth,
-          props,
-          index,
-          tasks.length,
-        )
-      }),
-    )
-  }
+  await reportOutcomes(
+    'enrolment',
+    outcomes,
+    (task) => `${task.action} ${task.user.userId} ${task.type} ${task.courseId}`,
+  )
 }
 
 async function runCourseDeletionTasks(store: Store) {
-  const tasks = store.tasks.courseDeletionTasks
+  const deletionTasks = store.tasks.courseDeletionTasks
 
-  if (!tasks.length) {
+  if (!deletionTasks.length) {
     return
   }
-
-  console.log('\n%c[ Running Deletion Tasks ]\n', 'color: yellow')
-
-  await Promise.all(
-    tasks.map(async (task, index) => {
-      const props = task
-
-      await googleClassroom.deleteCourse(
-        store.auth,
-        props,
-        index,
-        tasks.length,
-      )
-    }),
-  )
 
   await Deno.writeTextFile(
     appSettings.cacheStateFile,
@@ -537,6 +529,47 @@ async function runCourseDeletionTasks(store: Store) {
     `\n %c[Cache is now expired ]\n`,
     'color:red',
   )
+
+  console.log('\n%c[ Running Deletion Tasks ]\n', 'color: yellow')
+
+  const outcomes = await runTasks(
+    deletionTasks,
+    appSettings.taskConcurrency,
+    (courseId, index, total) =>
+      googleClassroom.deleteCourse(store.auth, courseId, index, total),
+    appSettings.maxConsecutiveTaskFailures,
+  )
+
+  await reportOutcomes('course-deletion', outcomes, (courseId) => courseId)
+}
+
+async function reportOutcomes<T>(
+  type: string,
+  outcomes: TaskOutcome<T>[],
+  describe: (item: T) => string,
+) {
+  const succeeded = outcomes.filter((outcome) => outcome.success).length
+  const failed = outcomes.filter((outcome) => !outcome.success && !outcome.skipped).length
+  const skipped = outcomes.filter((outcome) => outcome.skipped).length
+
+  console.log(
+    `\n%c[ ${type}: ${succeeded}/${outcomes.length} succeeded${
+      failed ? `, ${failed} failed` : ''
+    }${skipped ? `, ${skipped} skipped (circuit breaker)` : ''} ]\n`,
+    failed || skipped ? 'color:red' : 'color:green',
+  )
+
+  for (const outcome of outcomes) {
+    if (outcome.success) continue
+
+    const reason = outcome.skipped
+      ? 'skipped (circuit breaker tripped)'
+      : describeError(outcome.error)
+
+    console.log(`%c  - ${describe(outcome.item)}: ${reason}`, 'color:red')
+  }
+
+  await logFailures(type, outcomes, describe)
 }
 
 function viewSubejct(subject: string) {
