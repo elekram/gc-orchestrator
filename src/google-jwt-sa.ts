@@ -1,5 +1,6 @@
 import * as base64Url from 'https://deno.land/std@0.160.0/encoding/base64url.ts'
 import * as base64 from 'https://deno.land/std@0.165.0/encoding/base64.ts'
+import { fetchWithRetry } from './http-retry.ts'
 
 export type GoogleAuth = {
   access_token: string
@@ -92,7 +93,7 @@ async function fetchToken(assertion: string) {
   const grantType = `urn:ietf:params:oauth:grant-type:jwt-bearer`
   const body = `grant_type=${encodeURIComponent(grantType)}&assertion=${assertion}`
 
-  const response = await fetch(
+  const data = await fetchWithRetry(
     `https://oauth2.googleapis.com/token`,
     {
       method: 'POST',
@@ -101,24 +102,13 @@ async function fetchToken(assertion: string) {
       },
       body,
     },
+    'fetchToken()',
   )
 
-  if (response && !response.ok) {
-    const error = {
-      status: response.status,
-      statusText: response.statusText,
-      type: 'Google JWT',
-      message: await response.json(),
-    }
-    throw error
-  }
-
-  const jsonData = await response.json()
-
   return {
-    access_token: jsonData.access_token,
-    expires_in: jsonData.expires_in,
-    token_type: jsonData.token_type,
+    access_token: data.responseJson.access_token,
+    expires_in: data.responseJson.expires_in,
+    token_type: data.responseJson.token_type,
   }
 }
 

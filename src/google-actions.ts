@@ -1,5 +1,6 @@
 import { GoogleAuth } from './google-jwt-sa.ts'
 import appSettings from '../config/config.ts'
+import { fetchWithRetry } from './http-retry.ts'
 
 export async function listCourseMembers(
   auth: GoogleAuth,
@@ -39,15 +40,14 @@ export async function listCourseMembers(
 
     const pageToken = `pageToken=${nextPageToken}`
     try {
-      const response = await fetch(
+      const data = await fetchWithRetry(
         `${path}/${id}/${type}?${pageSize}&${pageToken}`,
         {
           method: 'GET',
           headers: getHeaders(auth),
         },
+        `listCourseMembers(${courseId})`,
       )
-
-      const data = await processResponse(response)
 
       if (!data.responseJson[type]) {
         return {
@@ -142,15 +142,15 @@ export async function addRemoveCourseMember(
   }
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       requestUrl,
       {
         method,
         headers: getHeaders(auth),
         body,
       },
+      `addRemoveCourseMember(${courseId}, ${userId})`,
     )
-    const data = await processResponse(response)
     console.log(
       `%c[ ${method} ${userId} ${verb} ${courseId} - Status ${data.status} ]\n`,
       'color:green',
@@ -187,15 +187,14 @@ export async function listCourses(
   do {
     const pageToken = `pageToken=${nextPageToken}`
 
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `${path}?${id}&${pageSize}&${pageToken}`,
       {
         method: 'GET',
         headers: getHeaders(auth),
       },
+      `listCourses(${userId})`,
     )
-
-    const data = await processResponse(response)
     const responseJson = data.responseJson.courses
 
     Array.prototype.push.apply(courses, responseJson)
@@ -234,15 +233,15 @@ export async function createCourseAlias(
   )
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       requestUrl,
       {
         method: 'POST',
         headers: getHeaders(auth),
         body,
       },
+      `createCourseAlias(${courseId}, ${alias})`,
     )
-    const data = await processResponse(response)
     console.log(
       `%c[ Alias ${alias} created for course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
@@ -276,14 +275,14 @@ export async function deleteCourseAlias(
   )
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       requestUrl,
       {
         method: 'DELETE',
         headers: getHeaders(auth),
       },
+      `deleteCourseAlias(${courseId}, ${alias})`,
     )
-    const data = await processResponse(response)
     console.log(
       `%c[ Alias ${alias} deleted for course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
@@ -318,15 +317,14 @@ export async function getCourseAliases(
     'color:lightblue',
   )
 
-  const response = await fetch(
+  const data = await fetchWithRetry(
     `https://classroom.googleapis.com/v1/courses/${id}/aliases`,
     {
       method: 'GET',
       headers: getHeaders(auth),
     },
+    `getCourseAliases(${courseId})`,
   )
-
-  const data = await processResponse(response)
 
   const aliases: string[] = []
   if (data.responseJson.aliases && data.responseJson.aliases.length) {
@@ -396,15 +394,15 @@ export async function editCourseMembers(
   )
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       requestUrl,
       {
         method,
         headers: getHeaders(auth),
         body,
       },
+      `editCourseMembers(${props.courseId}, ${member})`,
     )
-    const data = await processResponse(response)
     console.log(
       `%c[ ${method} ${member} ${verb} ${props.courseId} - Status ${data.status} ]\n`,
       'color:green',
@@ -447,15 +445,15 @@ export async function createCourse(
   const body = JSON.stringify(props.requestBody)
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `https://classroom.googleapis.com/v1/courses`,
       {
         method: 'POST',
         headers: getHeaders(auth),
         body,
       },
+      `createCourse(${courseId})`,
     )
-    const data = await processResponse(response)
     console.log(
       `%c[ Created course ${courseId} - Status ${data.status} ]\n`,
       'color:green',
@@ -487,16 +485,15 @@ export async function updateCourse(
   console.log(`\nPatching course ${courseId} - ${index} of ${total} tasks`)
 
   try {
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `${path}/d:${courseId}/?${updateMask}`,
       {
         method: 'PATCH',
         headers: getHeaders(auth),
         body,
       },
+      `updateCourse(${courseId})`,
     )
-
-    const data = await processResponse(response)
     console.log(
       `%c[ Patched course: ${courseId} - ${data.status} ]\n`,
       'color:green',
@@ -527,15 +524,14 @@ export async function deleteCourse(
 
   console.log(`Deleting course: ${courseId} - ${index} of ${total} tasks`)
 
-  const response = await fetch(
+  const data = await fetchWithRetry(
     `${path}/${id}`,
     {
       method: 'DELETE',
       headers: getHeaders(auth),
     },
+    `deleteCourse(${courseId})`,
   )
-
-  const data = await processResponse(response)
   console.log(
     `%c[ Deleted course ${courseId} - Status ${data.status} ]\n`,
     'color:green',
@@ -561,16 +557,15 @@ export async function changeCourseOwner(
 
   console.log(`\nPatching course ${courseId}`)
 
-  const response = await fetch(
+  const data = await fetchWithRetry(
     `${path}/${id}/?${updateMask}`,
     {
       method: 'PATCH',
       headers: getHeaders(auth),
       body,
     },
+    `changeCourseOwner(${courseId}, ${newOwner})`,
   )
-
-  const data = await processResponse(response)
   console.log(
     `%c[ Changed owner for ${courseId} to ${newOwner} - ${data.status} ]\n`,
     'color:green',
@@ -597,14 +592,14 @@ export async function listDirectoryUsers(
   do {
     const pageToken = `pageToken=${nextPageToken}`
 
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `${path}/?${domain}&${maxResults}&${pageToken}`,
       {
         method: 'GET',
         headers: getHeaders(auth),
       },
+      `listDirectoryUsers()`,
     )
-    const data = await processResponse(response)
 
     interface GoogleUser {
       primaryEmail: string
@@ -635,17 +630,6 @@ export async function listDirectoryUsers(
   console.log(`\n%c[ ${userCount} total users fetched ]\n`, 'color:cyan')
 
   return { activeUsers, suspendedUsers }
-}
-
-async function processResponse(r: Response) {
-  if (!r.ok) {
-    const responseJson = await r.json()
-    throw responseJson.error
-  }
-  const status = `${r.status}: ${r.statusText}`
-  const responseJson = await r.json()
-
-  return { status, responseJson }
 }
 
 function getHeaders(auth: GoogleAuth) {

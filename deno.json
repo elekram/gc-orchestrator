@@ -15,7 +15,8 @@
     "list-courses": "deno run -A --check main.ts --list-courses",
     "dailyorg": "deno run -A --check main.ts --dailyorg-replacements",
     "staging": "deno run -A --check main.ts --staging",
-    "scratch": "deno run -A --check main.ts --scratch"
+    "scratch": "deno run -A --check main.ts --scratch",
+    "test": "deno test -A"
   },
   "fmt": {
     "semiColons": false,
