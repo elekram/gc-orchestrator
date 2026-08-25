@@ -412,14 +412,31 @@ async function addTasksToStore(store: Store) {
     await tasks.addSubjectCourseTasksToStore(store)
   }
 
+  const enrolmentCollectionTasks: Promise<void>[] = []
+
+  const collectorCount = (appSettings.runEnrolmentTasks ? 2 : 0) +
+    (appSettings.runDailyorgTasks ? 1 : 0)
+  const collectionConcurrency = Math.max(
+    1,
+    Math.floor(appSettings.taskConcurrency / Math.max(1, collectorCount)),
+  )
+
   if (appSettings.runEnrolmentTasks) {
-    await tasks.addTeacherEnrolmentTasksToStore(store)
-    await tasks.addStudentEnrolmentTasksToStore(store)
+    enrolmentCollectionTasks.push(
+      tasks.addTeacherEnrolmentTasksToStore(store, collectionConcurrency),
+      tasks.addStudentEnrolmentTasksToStore(store, collectionConcurrency),
+    )
   }
 
   if (appSettings.runDailyorgTasks) {
-    await tasks.addDailyorgEnrolmentTasksToStore(store)
+    enrolmentCollectionTasks.push(
+      tasks.addDailyorgEnrolmentTasksToStore(store, collectionConcurrency),
+    )
   }
+
+  await Promise.all(enrolmentCollectionTasks)
+
+  await reportCollectionFailures(store)
 
   if (appSettings.runArchiveTasks) {
     await tasks.addCourseArchiveTasksToStore(store)
@@ -570,6 +587,40 @@ async function reportOutcomes<T>(
   }
 
   await logFailures(type, outcomes, describe)
+}
+
+async function reportCollectionFailures(store: Store) {
+  const failures = store.collectionFailures
+
+  if (!failures.length) return
+
+  console.log(
+    `\n%c[ enrolment-collection: ${failures.length} course(s) skipped - remote members could not be fetched ]\n`,
+    'color:red',
+  )
+
+  for (const failure of failures) {
+    console.log(
+      `%c  - ${failure.context} ${failure.courseAlias}: ${describeError(failure.error)}`,
+      'color:red',
+    )
+  }
+
+  const outcomes: TaskOutcome<tasks.CollectionFailure>[] = failures.map(
+    (failure, index) => ({
+      item: failure,
+      index,
+      success: false,
+      skipped: false,
+      error: failure.error,
+    }),
+  )
+
+  await logFailures(
+    'enrolment-collection',
+    outcomes,
+    (failure) => `${failure.context} ${failure.courseAlias}`,
+  )
 }
 
 function viewSubejct(subject: string) {

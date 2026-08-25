@@ -2,6 +2,7 @@ import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
 import appSettings from '../config/config.ts'
 import { tinyLogger } from './deps.ts'
+import { mapWithConcurrency } from './concurrency.ts'
 
 export async function addCoursesToStore(store: Store) {
   const auth = store.auth
@@ -140,15 +141,11 @@ export async function addCourseAliasMapToStore(store: Store) {
     return
   }
 
-  const courseAliases = await Promise.all(
-    googleCoursesIds.map(async (course, index) => {
-      return await googleClassroom.getCourseAliases(
-        auth,
-        course,
-        index,
-        googleCoursesIds.length,
-      )
-    }),
+  const courseAliases = await mapWithConcurrency(
+    googleCoursesIds,
+    appSettings.taskConcurrency,
+    (course, index, total) =>
+      googleClassroom.getCourseAliases(auth, course, index, total),
   )
 
   const newCache = JSON.stringify(courseAliases)

@@ -11,9 +11,6 @@ export async function listCourseMembers(
 ) {
   index = index + 1
 
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
-
   console.log(
     `%cFetching ${type} for course ${courseId} - ${index} of ${total} tasks`,
     'color:lightblue',
@@ -30,6 +27,7 @@ export async function listCourseMembers(
   let nextPageToken = ''
   const members: string[] = []
   let subtask = false
+  let status = ''
   do {
     if (subtask) {
       console.log(
@@ -39,49 +37,55 @@ export async function listCourseMembers(
     }
 
     const pageToken = `pageToken=${nextPageToken}`
-    try {
-      const data = await fetchWithRetry(
-        `${path}/${id}/${type}?${pageSize}&${pageToken}`,
-        {
-          method: 'GET',
-          headers: getHeaders(auth),
-        },
-        `listCourseMembers(${courseId})`,
+    const data = await fetchWithRetry(
+      `${path}/${id}/${type}?${pageSize}&${pageToken}`,
+      {
+        method: 'GET',
+        headers: getHeaders(auth),
+      },
+      `listCourseMembers(${courseId})`,
+    )
+
+    status = data.status
+
+    if (!data.responseJson[type]) {
+      console.log(
+        `%c[ Fetched 0 ${type} for ${courseId} - Status ${status} ]\n`,
+        'color:green',
       )
-
-      if (!data.responseJson[type]) {
-        return {
-          courseId,
-          [type]: [],
-        }
+      return {
+        courseId,
+        [type]: [],
       }
-
-      if (data.responseJson[type]) {
-        data.responseJson[type].forEach((member: {
-          profile: {
-            id: string
-            name: {
-              givenName: string
-              familyName: string
-              fullName: string
-            }
-            emailAddress: string
-          }
-        }) => {
-          if (!('emailAddress' in member.profile)) {
-            throw Error('listCourseMembers() emailAddress property missing from member')
-          }
-          members.push(member.profile.emailAddress)
-        })
-      }
-
-      nextPageToken = data.responseJson.nextPageToken
-      subtask = true
-    } catch (e) {
-      console.log(e)
-      console.log(`Error: listCourseMembers() --> ${courseId} - type: ${type}`)
     }
+
+    data.responseJson[type].forEach((member: {
+      profile: {
+        id: string
+        name: {
+          givenName: string
+          familyName: string
+          fullName: string
+        }
+        emailAddress: string
+      }
+    }) => {
+      if (!('emailAddress' in member.profile)) {
+        throw Error('listCourseMembers() emailAddress property missing from member')
+      }
+      members.push(member.profile.emailAddress)
+    })
+
+    nextPageToken = data.responseJson.nextPageToken
+    subtask = true
   } while (nextPageToken)
+
+  console.log(
+    `%c[ Fetched ${members.length} ${
+      members.length === 1 ? type.slice(0, -1) : type
+    } for ${courseId} - Status ${status} ]\n`,
+    'color:green',
+  )
 
   return {
     courseId,
@@ -308,9 +312,6 @@ export async function getCourseAliases(
 ) {
   index = index + 1
   const id = `${encodeURIComponent(courseId)}`
-
-  const delay = index * appSettings.taskDelay
-  await sleep(delay)
 
   console.log(
     `%cFetching alias for course ${courseId} - ${index} of ${total} tasks`,

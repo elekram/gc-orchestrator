@@ -1,6 +1,7 @@
 import { Store } from './store.ts'
 import * as googleClassroom from './google-actions.ts'
 import { diffArrays } from './diff-arrays.ts'
+import { mapWithConcurrency } from './concurrency.ts'
 import appSettings from '../config/config.ts'
 
 export enum CourseType {
@@ -55,6 +56,12 @@ export type TimetabledCourse = {
   courseAlias: string
   students: string[]
   teachers: string[]
+}
+
+export interface CollectionFailure {
+  context: string
+  courseAlias: string
+  error: unknown
 }
 
 export function addSubjectCourseTasksToStore(store: Store) {
@@ -290,7 +297,10 @@ export async function addClassCourseTasksToStore(store: Store) {
   }
 }
 
-export async function addStudentEnrolmentTasksToStore(store: Store) {
+export async function addStudentEnrolmentTasksToStore(
+  store: Store,
+  concurrency: number = appSettings.taskConcurrency,
+) {
   const auth = store.auth
   let timetabledCourses: TimetabledCourse[] = []
 
@@ -327,18 +337,31 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
     timetabledCourses = timetabledCourses.concat(subjectCourseEnrollments)
   }
 
-  const remoteCourseEnrolments = await Promise.all(
-    timetabledCourses.map(async (course, index) => {
-      const courseId = course.courseAlias
-
-      return await googleClassroom.listCourseMembers(
-        auth,
-        'students',
-        courseId,
-        index,
-        timetabledCourses.length,
-      )
-    }),
+  const remoteCourseEnrolments = await mapWithConcurrency(
+    timetabledCourses,
+    concurrency,
+    async (course, index, total) => {
+      try {
+        return await googleClassroom.listCourseMembers(
+          auth,
+          'students',
+          course.courseAlias,
+          index,
+          total,
+        )
+      } catch (e) {
+        console.log(
+          `%c[ Skipping student enrolment diff for ${course.courseAlias} - failed to fetch remote members: ${e} ]`,
+          'color:red',
+        )
+        store.collectionFailures.push({
+          context: 'student enrolment',
+          courseAlias: course.courseAlias,
+          error: e,
+        })
+        return null
+      }
+    },
   )
 
   for (const tc of timetabledCourses) {
@@ -400,7 +423,10 @@ export async function addStudentEnrolmentTasksToStore(store: Store) {
   }
 }
 
-export async function addDailyorgEnrolmentTasksToStore(store: Store) {
+export async function addDailyorgEnrolmentTasksToStore(
+  store: Store,
+  concurrency: number = appSettings.taskConcurrency,
+) {
   const auth = store.auth
   const dailyorgEnrolments: TimetabledCourse[] = []
 
@@ -420,17 +446,31 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
     })
   }
 
-  const remoteCourseEnrolments = await Promise.all(
-    dailyorgEnrolments.map(async (course, index) => {
-      const courseId = course.courseAlias
-      return await googleClassroom.listCourseMembers(
-        auth,
-        CourseEnrolmentType.Teachers,
-        courseId,
-        index,
-        dailyorgEnrolments.length,
-      )
-    }),
+  const remoteCourseEnrolments = await mapWithConcurrency(
+    dailyorgEnrolments,
+    concurrency,
+    async (course, index, total) => {
+      try {
+        return await googleClassroom.listCourseMembers(
+          auth,
+          CourseEnrolmentType.Teachers,
+          course.courseAlias,
+          index,
+          total,
+        )
+      } catch (e) {
+        console.log(
+          `%c[ Skipping dailyorg enrolment diff for ${course.courseAlias} - failed to fetch remote members: ${e} ]`,
+          'color:red',
+        )
+        store.collectionFailures.push({
+          context: 'dailyorg enrolment',
+          courseAlias: course.courseAlias,
+          error: e,
+        })
+        return null
+      }
+    },
   )
 
   for (const [code, enrolments] of store.replacements.dailyorgReplacements) {
@@ -463,7 +503,10 @@ export async function addDailyorgEnrolmentTasksToStore(store: Store) {
   }
 }
 
-export async function addTeacherEnrolmentTasksToStore(store: Store) {
+export async function addTeacherEnrolmentTasksToStore(
+  store: Store,
+  concurrency: number = appSettings.taskConcurrency,
+) {
   const auth = store.auth
   let timetabledCourses: TimetabledCourse[] = []
 
@@ -503,17 +546,31 @@ export async function addTeacherEnrolmentTasksToStore(store: Store) {
 
   timetabledCourses = timetabledCourses.concat(subjectCourseEnrolments)
 
-  const remoteCourseEnrolments = await Promise.all(
-    timetabledCourses.map(async (course, index) => {
-      const courseId = course.courseAlias
-      return await googleClassroom.listCourseMembers(
-        auth,
-        'teachers',
-        courseId,
-        index,
-        timetabledCourses.length,
-      )
-    }),
+  const remoteCourseEnrolments = await mapWithConcurrency(
+    timetabledCourses,
+    concurrency,
+    async (course, index, total) => {
+      try {
+        return await googleClassroom.listCourseMembers(
+          auth,
+          'teachers',
+          course.courseAlias,
+          index,
+          total,
+        )
+      } catch (e) {
+        console.log(
+          `%c[ Skipping teacher enrolment diff for ${course.courseAlias} - failed to fetch remote members: ${e} ]`,
+          'color:red',
+        )
+        store.collectionFailures.push({
+          context: 'teacher enrolment',
+          courseAlias: course.courseAlias,
+          error: e,
+        })
+        return null
+      }
+    },
   )
 
   for (const tc of timetabledCourses) {

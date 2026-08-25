@@ -2,7 +2,7 @@ import { GoogleAuth } from './google-jwt-sa.ts'
 import { Class, CompositeClass } from './subjects-and-classes.ts'
 import { CourseTask } from './tasks.ts'
 import { CourseMemberProps } from './google-actions.ts'
-import { TimetabledCourse } from './tasks.ts'
+import { CollectionFailure, TimetabledCourse } from './tasks.ts'
 import { Course } from './google-actions.ts'
 
 export interface Store {
@@ -37,6 +37,7 @@ export interface Store {
     enrolmentTasks: CourseMemberProps[]
     courseDeletionTasks: string[]
   }
+  collectionFailures: CollectionFailure[]
 }
 
 export const store: Store = {
@@ -73,4 +74,5 @@ export const store: Store = {
     enrolmentTasks: [],
     courseDeletionTasks: [],
   },
+  collectionFailures: [],
 }
